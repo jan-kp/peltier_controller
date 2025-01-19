@@ -1,0 +1,3 @@
+[submodule "lib/LT8722"]
+	path = lib/LT8722
+	url = git@github.com:jan-kp/liblt8722_platformio.git
