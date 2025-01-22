@@ -21,9 +21,11 @@
  */
 
 #include <Arduino.h>
-#include <LT8722.h>
 #include <Adafruit_MAX31865.h>
 #include <QuickPID.h>
+
+#include "LT8722.h"
+#include "ControlTFT.h"
 
 LT8722 peltierDriver;                                           //create a LT8722 object with FSPI
 
@@ -37,11 +39,16 @@ float Kp = 0.09, Ki = 0.25, Kd = 0;                             //PID tuning par
 float Setpoint, Input, Output;                                  //variables for PID      
 QuickPID peltierPID(&Input, &Output, &Setpoint);                //specify PID links
 
+ControlTFT display;
+
 void checkPT1000Falts();
 
 void setup() {
   Serial.begin(115200);
   delay(5000);
+
+  display.begin();
+  display.drawTabSelect(true);
 
   pt1000.begin(MAX31865_2WIRE);                                         //initialize pt1000 in 2 wire mode
   
@@ -58,25 +65,37 @@ void setup() {
   peltierPID.SetControllerDirection(peltierPID.Action::reverse);        //set PID to reverse mode
   peltierPID.SetMode(peltierPID.Control::automatic);                    //turn the PID on
 
-  bool error = peltierDriver.setVoltage(0);                             //set LT8722 output to 0V
-  Serial.println("LT8722 ERROR:");
-  Serial.println(error);
-  delay(5000);
+  //bool error = peltierDriver.setVoltage(0);                             //set LT8722 output to 0V
+  //Serial.println("LT8722 ERROR:");
+  //Serial.println(error);
+  //delay(5000);
 }
 
 void loop() {
-  double temperature = pt1000.temperature(RNOMINAL, RREF);
-  Serial.print("Temperature = "); Serial.println(temperature);
+  //double temperature = pt1000.temperature(RNOMINAL, RREF);
+  //Serial.print("Temperature = "); Serial.println(temperature);
 
-  Input = temperature;
-  peltierPID.Compute();
-  Serial.print("Voltage = "); Serial.println(Output);
+  //Input = temperature;
+  //peltierPID.Compute();
+  //Serial.print("Voltage = "); Serial.println(Output);
 
-  bool error = peltierDriver.setVoltage(Output);
-  Serial.println("LT8722 ERROR:");
-  Serial.println(error);
+  //bool error = peltierDriver.setVoltage(Output);
+  //Serial.println("LT8722 ERROR:");
+  //Serial.println(error);
 
-  checkPT1000Falts();
+  //checkPT1000Falts();
+
+  display.drawTabSelect();
+
+  if (display.getTab() == PRESSED_TAB::CONTROL) {
+    display.drawControlTab();
+  } else if (display.getTab() == PRESSED_TAB::TESTS) {
+    display.drawTestsTab();
+  } else if (display.getTab() == PRESSED_TAB::STATUS) {
+    display.drawStatusTab();
+  } else if (display.getTab() == PRESSED_TAB::COMMAND) {
+    display.drawCommandTab();
+  }
 }
 
 void checkPT1000Falts() {
