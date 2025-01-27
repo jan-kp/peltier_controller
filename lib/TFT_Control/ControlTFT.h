@@ -133,30 +133,33 @@ struct controlData {
 };
 
 struct testsData {
-    double valueStartTemperature;
-    double valueEndTemperature;
-    double valueRiseTime;
-    double valueFallTime;
-    double valueNumberCycles;
-    double valueTimeAtTemperature;
-    double valueNumberSteps;
-    bool   buttonDecreaseStartTemperaturePressed;
-    bool   buttonIncreaseStartTemperaturePressed;
-    bool   buttonDecreaseEndTemperaturePressed;
-    bool   buttonIncreaseEndTemperaturePressed;
-    bool   buttonDecreaseRiseTimePressed;
-    bool   buttonIncreaseRiseTimePressed;
-    bool   buttonDecreaseFallTimePressed;
-    bool   buttonIncreaseFallTimePressed;
-    bool   buttonDecreaseNumberCyclesPressed;
-    bool   buttonIncreaseNumberCyclesPressed;
-    bool   buttonDecreaseTimeAtTemperaturePressed;
-    bool   buttonIncreaseTimeAtTemperaturePressed;
-    bool   buttonDecreaseNumberStepsPressed;
-    bool   buttonIncreaseNumberStepsPressed;
-    bool   buttonResetTestPressed;
-    bool   buttonStopTestPressed;
-    bool   buttonStartTestPressed;
+    double  valueStartTemperature;
+    double  valueEndTemperature;
+    double  valueRiseTime;
+    double  valueFallTime;
+    double  valueRiseStepSize;
+    double  valueFallStepSize;
+    double  valueNumberCycles;
+    double  valueProgress;
+    bool    buttonDecreaseStartTemperaturePressed;
+    bool    buttonIncreaseStartTemperaturePressed;
+    bool    buttonDecreaseEndTemperaturePressed;
+    bool    buttonIncreaseEndTemperaturePressed;
+    bool    buttonDecreaseRiseTimePressed;
+    bool    buttonIncreaseRiseTimePressed;
+    bool    buttonDecreaseFallTimePressed;
+    bool    buttonIncreaseFallTimePressed;
+    bool    buttonDecreaseRiseStepSizePressed;
+    bool    buttonIncreaseRiseStepSizePressed;
+    bool    buttonDecreaseFallStepSizePressed;
+    bool    buttonIncreaseFallStepSizePressed;
+    bool    buttonDecreaseNumberCyclesPressed;
+    bool    buttonIncreaseNumberCyclesPressed;
+    bool    buttonResetTestPressed;
+    bool    buttonStopTestPressed;
+    bool    buttonStartTestPressed;
+    bool    buttonStartTestPreviouslyPressed;
+    uint8_t infoInformation;
 };
 
 struct statusData {
@@ -200,13 +203,9 @@ public:
     void drawCommandTab(commandData data);
 
     PRESSED_TAB getTab();
-    bool getControlRunning();
-    bool getTestRunning();
-    bool getMeasurementH2Sensor1Running();
-    bool getMeasurementH2Sensor2Running();
 
-    void setControlRunning(bool state);
-    void setTestRunning(bool state);
+    void resetControlRunning();
+    void resetTestRunning();
 
 private:
     void touchCalibrate();
@@ -214,8 +213,8 @@ private:
     bool checkTouchTabs();
     bool inArea(int16_t startX, int16_t startY, int16_t withX, int16_t hightY, int16_t touchX, int16_t touchY);
     button buttonPressed(button button, uint16_t t_x, uint16_t t_y, bool pressed);
-    void lockButton(button lock, bool* task);
-    void releaseButton(button action, button release, bool* task);
+    void lockButton(button* lock, bool* task);
+    void releaseButton(button action, button* release, bool* task);
 
     void drawButton(button button);
     void drawText(text text, uint8_t position);
@@ -275,9 +274,10 @@ private:
     struct text _textEndTemperature;
     struct text _textRiseTime;
     struct text _textFallTime;
+    struct text _textRiseStepSize;
+    struct text _textFallStepSize;
     struct text _textNumberCycles;
-    struct text _textTimeAtTemperature;
-    struct text _textNumberSteps;
+    struct text _textInformation;
     struct text _textTest;
 
     //buttons for tests tab
@@ -289,12 +289,12 @@ private:
     struct button _buttonIncreaseRiseTime;
     struct button _buttonDecreaseFallTime;
     struct button _buttonIncreaseFallTime;
+    struct button _buttonDecreaseRiseStepSize;
+    struct button _buttonIncreaseRiseStepSize;
+    struct button _buttonDecreaseFallStepSize;
+    struct button _buttonIncreaseFallStepSize;
     struct button _buttonDecreaseNumberCycles;
     struct button _buttonIncreaseNumberCycles;
-    struct button _buttonDecreaseTimeAtTemperature;
-    struct button _buttonIncreaseTimeAtTemperature;
-    struct button _buttonDecreaseNumberSteps;
-    struct button _buttonIncreaseNumberSteps;
     struct button _buttonResetTest;
     struct button _buttonStopTest;
     struct button _buttonStartTest;
@@ -304,9 +304,13 @@ private:
     struct value _valueEndTemperature;
     struct value _valueRiseTime;
     struct value _valueFallTime;
+    struct value _valueRiseStepSize;
+    struct value _valueFallStepSize;
     struct value _valueNumberCycles;
-    struct value _valueTimeAtTemperature;
-    struct value _valueNumberSteps;
+    struct value _valueProgress;
+
+    //info for tests tab
+    struct info _infoInformation;
 
     //texts for status tab
     struct text _textPWMSwitchingEvent;

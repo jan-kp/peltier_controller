@@ -1,0 +1,64 @@
+Rise: 0.00
+Rise: 121.00
+Rise: 261.00
+Rise: 369.00
+Rise: 396.00
+Rise: 495.00
+Rise: 594.00
+Rise: 693.00
+Rise: 792.00
+Rise: 891.00
+Rise: 990.00
+Rise: 1089.00
+Rise: 1188.00
+Rise: 1287.00
+Rise: 1386.00
+Rise: 1491.00
+Rise: 1591.00
+Rise: 1692.00
+Rise: 1787.00
+Rise: 1889.00
+Rise: 1990.00
+Rise: 2088.00
+Rise: 2190.00
+Rise: 2289.00
+Rise: 2391.00
+Rise: 2486.00
+Rise: 2590.00
+Rise: 2689.00
+Rise: 2794.00
+Rise: 2898.00
+Rise: 3002.00
+Rise: 3110.00
+Rise: 3215.00
+Rise: 3316.00
+Rise: 3366.00
+E (26319) task_wdt: Task watchdog got triggered. The following tasks did not reset the watchdog in time:
+E (26319) task_wdt:  - IDLE0 (CPU 0)
+E (26319) task_wdt: Tasks currently running:
+E (26319) task_wdt: CPU 0: Test
+E (26319) task_wdt: CPU 1: loopTask
+E (26319) task_wdt: Aborting.
+
+abort() was called at PC 0x4201919c on core 0
+
+
+Backtrace: 0x40377762:0x3fc92cf0 0x4037aa9d:0x3fc92d10 0x403801d1:0x3fc92d30 0x4201919c:0x3fc92db0 0x4037889d:0x3fc92dd0 0x4037c5f9:0x3fc9ff20
+
+
+
+
+ELF file SHA256: 235b28742335291d
+
+Rebooting...
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0x8 (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40377370
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce3808,len:0x4bc
+load:0x403c9700,len:0xbd8
+load:0x403cc700,len:0x2a0c
+entry 0x403c98d0
+[  2505][E][esp32-hal-cpu.c:110] addApbChangeCallback(): duplicate func=0x4200f798 arg=0x3fc91e04
