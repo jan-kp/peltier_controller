@@ -9,14 +9,6 @@
 
 #include "ControlTFT.h"
 
-
-/**************************************************************************/
-/*!
-    @brief Calculate the CRC for two bytes
-    @param data Data for the CRC calculation
-    @return CRC value
-*/
-/**************************************************************************/
 ControlTFT::ControlTFT() : _tabSelect(&_tft), _background(&_tft), _button(&_tft), _text(&_tft), _value(&_tft), _event(&_tft),  _info(&_tft) {
   _tft.init();
   _tft.setRotation(1); 
@@ -448,6 +440,7 @@ controlData ControlTFT::drawControlTab(controlData data) {
     releaseButton(_buttonStop, &_buttonStart, &_controlRunning);
 
     _buttonStart = buttonPressed(_buttonStart, t_x, t_y, pressed);
+    data.buttonStartPreviouslyPressed = data.buttonStartPressed;
     data.buttonStartPressed = _buttonStart.pressed;
     lockButton(&_buttonStart, &_controlRunning);
   }  

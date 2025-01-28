@@ -130,6 +130,7 @@ struct controlData {
     bool   buttonResetPressed;
     bool   buttonStopPressed;
     bool   buttonStartPressed;
+    bool   buttonStartPreviouslyPressed;
 };
 
 struct testsData {

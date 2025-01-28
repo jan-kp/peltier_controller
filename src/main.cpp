@@ -53,18 +53,22 @@ QuickPID peltierPID(&Input, &Output, &Setpoint);                //specify PID li
 ControlTFT display;
 
 const float refResistance = 4300.0;                             //the value of the Rref resistor
-float nominalResistance   = 940;                              //the 'nominal' 0-degrees-C resistance of the sensor
+float nominalResistance   = 940;                                //the 'nominal' 0-degrees-C resistance of the sensor
 
-float startTemperature = 10.0;
-float endTemperature   = 30.0;
+float startTemperature = 0.0;
+float endTemperature   = 60.0;
 float riseTime         = 30.0;
 float fallTime         = 30.0;
 float riseStepSize     = 0.5;
 float fallStepSize     = 0.5;
-float numberCycles     = 1.0;
+float numberCycles     = 5.0;
 
-bool testRunning    = false;
 bool controlRunning = false;
+bool testRunning    = false;
+double startTime    = 0;
+
+bool buttonPressed = false;
+double timeButtonPressed = 0;
 
 struct controlData dataControl = {};
 struct testsData dataTests = {};
@@ -72,74 +76,105 @@ struct statusData dataStatus = {};
 struct commandData dataCommand = {};
 
 void changeValue(bool increase, bool decrease, double step, float* value, float maxValue, float minValue);
+void checkButtonPressed();
+void printData();
+void printHeader();
 
 void taskcompute_loop(void * parameter) {
   bool MeasurementH2Sensor1Running = false;
   bool MeasurementH2Sensor2Running = false;
+  uint8_t token = 0;
 
   for( ;; ) {
+    checkButtonPressed();
+
+    if (controlRunning || testRunning) {
+      printData();
+    }
+
+    if (dataControl.eventCommunicationError) {
+      display.resetControlRunning();
+      display.resetTestRunning();
+      controlRunning = false;
+      testRunning = false;
+      peltierDriver.powerOff();
+    }
+    
+
     if (display.getTab() == PRESSED_TAB::CONTROL) {
       xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-      dataControl.valueChipTemperature    = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::TEMPERATURE);
-      dataControl.valueOutputVoltage      = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::VOLTAGE);
-      dataControl.valueOutputCurrent      = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::CURRENT);
-      dataControl.valueNominalResistance  = nominalResistance;
-      dataControl.valueSetTemperature     = Setpoint;
-      dataControl.valueCurrentTemperature = pt1000.temperature(nominalResistance, refResistance);
+        dataControl.valueNominalResistance  = nominalResistance;
+        dataControl.valueSetTemperature     = Setpoint;
 
-      if(dataControl.buttonMeasureH2Sensor1StartPressed) {
-        MeasurementH2Sensor1Running = true;
-      } else if (dataControl.buttonMeasureH2Sensor1StopPressed) {
-        MeasurementH2Sensor1Running = false;
-      }
+        if (token == 0) {
+          dataControl.valueChipTemperature = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::TEMPERATURE);
+          token = 1;
+        } else if (token == 1) {
+          dataControl.valueOutputVoltage = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::VOLTAGE);
+          token = 2;
+        } else if (token == 2) {
+          dataControl.valueOutputCurrent = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::CURRENT);
+          token = 3;
+        } else if (token == 3) {
+          dataControl.valueCurrentTemperature = pt1000.temperature(nominalResistance, refResistance);
+          token = 0;
+        } else {
+          token = 0;
+        }
+        
+        if(dataControl.buttonMeasureH2Sensor1StartPressed) {
+          MeasurementH2Sensor1Running = true;
+        } else if (dataControl.buttonMeasureH2Sensor1StopPressed) {
+          MeasurementH2Sensor1Running = false;
+        }
 
-      if(dataControl.buttonMeasureH2Sensor2StartPressed) {
-        MeasurementH2Sensor2Running = true;
-      } else if (dataControl.buttonMeasureH2Sensor2StopPressed) {
-        MeasurementH2Sensor2Running = false;
-      }
+        if(dataControl.buttonMeasureH2Sensor2StartPressed) {
+          MeasurementH2Sensor2Running = true;
+        } else if (dataControl.buttonMeasureH2Sensor2StopPressed) {
+          MeasurementH2Sensor2Running = false;
+        }
 
-      if (MeasurementH2Sensor2Running) {
-        double voltage = analogRead(H2SENSOR1);
-        voltage /= 1000;
-        dataControl.valueMeasureH2Sensor1 = voltage;
-      } else {
-        dataControl.valueMeasureH2Sensor1 = 0.0;
-      }
+        if (MeasurementH2Sensor2Running) {
+          double voltage = analogRead(H2SENSOR1);
+          voltage /= 1000;
+          dataControl.valueMeasureH2Sensor1 = voltage;
+        } else {
+          dataControl.valueMeasureH2Sensor1 = 0.0;
+        }
 
-      if (MeasurementH2Sensor2Running) {
-        double voltage = analogRead(H2SENSOR2);
-        voltage /= 1000;
-        dataControl.valueMeasureH2Sensor2 = voltage;
-      } else {
-        dataControl.valueMeasureH2Sensor2 = 0.0;
-      }
+        if (MeasurementH2Sensor2Running) {
+          double voltage = analogRead(H2SENSOR2);
+          voltage /= 1000;
+          dataControl.valueMeasureH2Sensor2 = voltage;
+        } else {
+          dataControl.valueMeasureH2Sensor2 = 0.0;
+        }
       xSemaphoreGive(SemaphoreDataControl);
       
       xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
-      changeValue(dataControl.buttonIncreaseSetTemperaturePressed, dataControl.buttonDecreaseSetTemperaturePressed, 0.5, &Setpoint, -5, 150);
+        changeValue(dataControl.buttonIncreaseSetTemperaturePressed, dataControl.buttonDecreaseSetTemperaturePressed, 0.5, &Setpoint, -5, 150);
       xSemaphoreGive(SemaphoreDataPID);
 
-      if (dataControl.buttonStartPressed && !dataControl.eventCommunicationError) {
+      changeValue(dataControl.buttonIncreaseNominalResistancePressed, dataControl.buttonDecreaseNominalResistancePressed, 0.1, &nominalResistance, 900, 1100);
+
+      if (dataControl.buttonStartPressed && !dataTests.buttonStartTestPreviouslyPressed && !controlRunning && !dataControl.eventCommunicationError) {
         controlRunning = true;
+        startTime = millis();
+        startTime /= 1000;
         peltierDriver.softStart();                                            //softstart of the LT8722 (resets all registers)
         peltierDriver.setPositiveVoltageLimit(VOLTAGE_LIMIT::LIMIT_5_00);     //set the positive voltage limit to 5V
         peltierDriver.setNegativeVoltageLimit(VOLTAGE_LIMIT::LIMIT_5_00);     //set the negative voltage limit to -5V
         peltierDriver.setPositiveCurrentLimit(4.5);                           //set the positive current limit to 4.5A
         peltierDriver.setNegativeCurrentLimit(4.5);                           //set the negative current limit to -4.5A
+        printHeader();
       } else if (dataControl.buttonStopPressed) {
         controlRunning = false;
         peltierDriver.powerOff();
       } else if (dataControl.buttonResetPressed) {
         controlRunning = false;
         peltierDriver.reset();
-        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
         dataControl.eventCommunicationError = false;
-        xSemaphoreGive(SemaphoreDataControl);
       }
-
-      changeValue(dataControl.buttonIncreaseNominalResistancePressed, dataControl.buttonDecreaseNominalResistancePressed, 0.1, &nominalResistance, 900, 1100);
-
     } else if (display.getTab() == PRESSED_TAB::TESTS) {
       xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
         dataTests.valueStartTemperature  = startTemperature;
@@ -151,32 +186,40 @@ void taskcompute_loop(void * parameter) {
         dataTests.valueNumberCycles      = numberCycles;
       xSemaphoreGive(SemaphoreDataTests);
 
-      changeValue(dataTests.buttonIncreaseStartTemperaturePressed, dataTests.buttonDecreaseStartTemperaturePressed, 0.5, &startTemperature,  -5, 150);
-      changeValue(dataTests.buttonIncreaseEndTemperaturePressed  , dataTests.buttonDecreaseEndTemperaturePressed  , 0.5, &endTemperature  ,  -5, 150);
+      changeValue(dataTests.buttonIncreaseStartTemperaturePressed, dataTests.buttonDecreaseStartTemperaturePressed, 0.5, &startTemperature,  -5, endTemperature);
+      changeValue(dataTests.buttonIncreaseEndTemperaturePressed  , dataTests.buttonDecreaseEndTemperaturePressed  , 0.5, &endTemperature  ,  startTemperature, 150);
       changeValue(dataTests.buttonIncreaseRiseTimePressed        , dataTests.buttonDecreaseRiseTimePressed        , 0.5, &riseTime        , 0.5, 999999);
       changeValue(dataTests.buttonIncreaseFallTimePressed        , dataTests.buttonDecreaseFallTimePressed        , 0.5, &fallTime        , 0.5, 999999);
-      changeValue(dataTests.buttonIncreaseRiseStepSizePressed    , dataTests.buttonDecreaseRiseStepSizePressed    , 0.1, &riseStepSize    , 0.5, 160);
-      changeValue(dataTests.buttonIncreaseFallStepSizePressed    , dataTests.buttonDecreaseFallStepSizePressed    , 0.1, &fallStepSize    , 0.5, 160);
+      changeValue(dataTests.buttonIncreaseRiseStepSizePressed    , dataTests.buttonDecreaseRiseStepSizePressed    , 0.1, &riseStepSize    , 0.5, (endTemperature-startTemperature));
+      changeValue(dataTests.buttonIncreaseFallStepSizePressed    , dataTests.buttonDecreaseFallStepSizePressed    , 0.1, &fallStepSize    , 0.5, (endTemperature-startTemperature));
       changeValue(dataTests.buttonIncreaseNumberCyclesPressed    , dataTests.buttonDecreaseNumberCyclesPressed    ,   1, &numberCycles    ,   1, 999999);
 
       if (dataTests.buttonStartTestPressed && !dataTests.buttonStartTestPreviouslyPressed && !testRunning) {
         testRunning = true;
-        dataTests.infoInformation = 1;
+        startTime = millis();
+        startTime /= 1000;
         peltierDriver.softStart();                                            //softstart of the LT8722 (resets all registers)
         peltierDriver.setPositiveVoltageLimit(VOLTAGE_LIMIT::LIMIT_5_00);     //set the positive voltage limit to 5V
         peltierDriver.setNegativeVoltageLimit(VOLTAGE_LIMIT::LIMIT_5_00);     //set the negative voltage limit to -5V
         peltierDriver.setPositiveCurrentLimit(4.5);                           //set the positive current limit to 4.5A
         peltierDriver.setNegativeCurrentLimit(4.5);                           //set the negative current limit to -4.5A
+        dataTests.infoInformation = 1;
+        printHeader();
       } else if (dataTests.buttonStopTestPressed) {
         testRunning = false;
-        dataTests.infoInformation = 0;
         peltierDriver.powerOff();
+        dataTests.infoInformation = 0;
         xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
-        Setpoint = 10;
+          Setpoint = 10;
         xSemaphoreGive(SemaphoreDataPID);
       } else if (dataTests.buttonResetTestPressed) {
-        testRunning      = false;
+        testRunning = false;
+        peltierDriver.reset();
         dataTests.infoInformation = 0;
+        xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
+          Setpoint = 10;
+        xSemaphoreGive(SemaphoreDataPID);
+        dataControl.eventCommunicationError = false;
         startTemperature = 0.0;
         endTemperature   = 60.0;
         riseTime         = 30.0;
@@ -184,40 +227,32 @@ void taskcompute_loop(void * parameter) {
         riseStepSize     = 0.5;
         fallStepSize     = 0.5;
         numberCycles     = 5.0;
-        peltierDriver.reset();
-        xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
-        Setpoint = 10;
-        xSemaphoreGive(SemaphoreDataPID);
-        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-        dataControl.eventCommunicationError = false;
-        xSemaphoreGive(SemaphoreDataControl);
       }
-      
     } else if (display.getTab() == PRESSED_TAB::STATUS) {
       uint16_t status = peltierDriver.getStatus();
 
       xSemaphoreTake(SemaphoreDataStatus, portMAX_DELAY);
-      dataStatus.eventPWMSwitchingEvent      = status & 1;
-      dataStatus.eventCurrentLimitEvent      = (status >> 1) & 1;
-      dataStatus.eventPowerLimitEvent        = (status >> 2) & 1;
-      dataStatus.eventSoftResetEvent         = (status >> 4) & 1;
-      dataStatus.eventOverCurrentEvent       = (status >> 5) & 1;
-      dataStatus.eventOverttemperatureEvent  = (status >> 6) & 1;
-      dataStatus.eventVCCUnderVoltageEvent   = (status >> 7) & 1;
-      dataStatus.eventVDDIOUnderVOltageEvent = (status >> 8) & 1;
+        dataStatus.eventPWMSwitchingEvent      = status & 1;
+        dataStatus.eventCurrentLimitEvent      = (status >> 1) & 1;
+        dataStatus.eventPowerLimitEvent        = (status >> 2) & 1;
+        dataStatus.eventSoftResetEvent         = (status >> 4) & 1;
+        dataStatus.eventOverCurrentEvent       = (status >> 5) & 1;
+        dataStatus.eventOverttemperatureEvent  = (status >> 6) & 1;
+        dataStatus.eventVCCUnderVoltageEvent   = (status >> 7) & 1;
+        dataStatus.eventVDDIOUnderVOltageEvent = (status >> 8) & 1;
       xSemaphoreGive(SemaphoreDataStatus);
     } else if (display.getTab() == PRESSED_TAB::COMMAND) {
       uint32_t command = peltierDriver.getCommand();
 
       xSemaphoreTake(SemaphoreDataCommand, portMAX_DELAY);
-      dataCommand.eventPowerStage         = command & 1;
-      dataCommand.eventPWMSwitching       = (command >> 1) & 1;
-      dataCommand.infoPWMFrequency        = (command >> 2) & 0b111;
-      dataCommand.infoPWMAdjust           = (command >> 5) & 0b11;
-      dataCommand.infoPWMDutyCycle        = (command >> 7) & 0b11;
-      dataCommand.eventLDORegulation      = (command >> 9) & 1;
-      dataCommand.infoPeakInductorCurrent = (command >> 11) & 0b111;
-      dataCommand.infoPowerLimit          = (command >> 15) & 0b11;
+        dataCommand.eventPowerStage         = command & 1;
+        dataCommand.eventPWMSwitching       = (command >> 1) & 1;
+        dataCommand.infoPWMFrequency        = (command >> 2) & 0b111;
+        dataCommand.infoPWMAdjust           = (command >> 5) & 0b11;
+        dataCommand.infoPWMDutyCycle        = (command >> 7) & 0b11;
+        dataCommand.eventLDORegulation      = (command >> 9) & 1;
+        dataCommand.infoPeakInductorCurrent = (command >> 11) & 0b111;
+        dataCommand.infoPowerLimit          = (command >> 15) & 0b11;
       xSemaphoreGive(SemaphoreDataCommand);
     }
   }
@@ -244,8 +279,6 @@ void taskdisplay_loop(void * parameter) {
       xSemaphoreTake(SemaphoreDataCommand, portMAX_DELAY);
       display.drawCommandTab(dataCommand);
       xSemaphoreGive(SemaphoreDataCommand);
-    } else {
-      vTaskDelay(pdMS_TO_TICKS(500));
     }
   }
   vTaskDelete( NULL );
@@ -255,27 +288,19 @@ void taskpid_loop(void * parameter) {
   for( ;; ) {
     if (controlRunning || testRunning) {
       xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
-      Input = pt1000.temperature(nominalResistance, refResistance);
-      peltierPID.Compute();
+        Input = pt1000.temperature(nominalResistance, refResistance);
+        peltierPID.Compute();
       xSemaphoreGive(SemaphoreDataPID);
 
       bool error = false;
       error = peltierDriver.setVoltage(Output);
 
       if (error || pt1000.readFault()) {
-        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
         dataControl.eventCommunicationError = true;
-        xSemaphoreGive(SemaphoreDataControl);
-        display.resetControlRunning();
-        display.resetTestRunning();
-        controlRunning = false;
-        testRunning = false;
-        peltierDriver.powerOff();
       }
     } else {
-      vTaskDelay(pdTICKS_TO_MS(500));
+      vTaskDelay(pdMS_TO_TICKS(500));
     }
-    
   }
   vTaskDelete( NULL );
 }
@@ -300,7 +325,6 @@ void tasktest_loop(void * parameter) {
   TickType_t xLastWakeTime;
   TickType_t xDelayTime = pdMS_TO_TICKS(500);
 
-  // Initialise the xLastWakeTime variable with the current time.
   xLastWakeTime = xTaskGetTickCount();
 
   for( ;; ) {
@@ -324,20 +348,23 @@ void tasktest_loop(void * parameter) {
 
         Setpoint         = currentSetTemperature;
         testRunningFirst = false;
-        dataTests.valueProgress = 0;
 
         if(endTemperature < startTemperature) {
-          dataTests.infoInformation = 3;
-          display.resetTestRunning();
           testRunning = false;
-          Setpoint = 10;
           peltierDriver.powerOff();
-        } else if (delayTimeRise < 100 || delayTimeFall < 100) {
-          dataTests.infoInformation = 2;
+          dataTests.infoInformation = 3;
+          xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
+            Setpoint = 10;
+          xSemaphoreGive(SemaphoreDataPID);
           display.resetTestRunning();
+        } else if (delayTimeRise < 100 || delayTimeFall < 100) {
           testRunning = false;
-          Setpoint = 10;
-          peltierDriver.reset();
+          peltierDriver.powerOff();
+          dataTests.infoInformation = 2;
+          xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
+            Setpoint = 10;
+          xSemaphoreGive(SemaphoreDataPID);
+          display.resetTestRunning();
         }
 
         xDelayTime = pdMS_TO_TICKS(20000);
@@ -355,20 +382,19 @@ void tasktest_loop(void * parameter) {
           xSemaphoreGive(SemaphoreDataPID);
           xDelayTime = pdMS_TO_TICKS(delayTimeRise);
         } else {
-          if (currentCycle == numberCycles) {
-            xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
+          if (currentCycle == numberCycles-1) {
+            testRunning = false;
+            peltierDriver.powerOff();
             dataTests.infoInformation = 0;
-            xSemaphoreGive(SemaphoreDataTests);
             xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
             Setpoint = 10;
             xSemaphoreGive(SemaphoreDataPID);
             display.resetTestRunning();
-            testRunning = false;
-            peltierDriver.powerOff();
           }
-          currentCycle++;
+          currentCycle += 1;
           counterStepsRise = 0;
           counterStepsFall = 0;
+          xDelayTime = pdMS_TO_TICKS(100);
         }
         counterTotalSteps++;
         dataTests.valueProgress = (counterTotalSteps / ((numberStepsRise + numberStepsFall) * numberCycles)) * 100;
@@ -400,7 +426,7 @@ void tasktest_loop(void * parameter) {
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(2000);
 
   display.begin();
   display.drawTabSelect(true);
@@ -461,15 +487,68 @@ void loop() {
 }
 
 void changeValue(bool increase, bool decrease, double step, float* value, float minValue, float maxValue) {
-  if (increase) {
-    if (*value < maxValue) {
-      *value = *value + step;
-      vTaskDelay(pdMS_TO_TICKS(100));
-    }
-  } else if (decrease) {
-    if (*value >  minValue) {
-      *value = *value - step;
-      vTaskDelay(pdMS_TO_TICKS(100));
+  if (buttonPressed) {
+    if (increase) {
+      if (*value < maxValue) {
+        if ((millis() - timeButtonPressed) < 5000) {
+          *value = *value + step;
+        } else {
+          *value = *value + step*10;
+        }
+
+        if (*value > maxValue) {
+          *value = maxValue;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+      }
+    } else if (decrease) {
+      if (*value > minValue) {
+        if ((millis() - timeButtonPressed) < 5000) {
+          *value = *value - step;
+        } else {
+          *value = *value - step*10;
+        }
+
+        if (*value < minValue) {
+          *value = minValue;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+      }
     }
   }
+}
+
+void checkButtonPressed() {
+  if (!dataControl.buttonIncreaseSetTemperaturePressed && !dataControl.buttonDecreaseSetTemperaturePressed && !dataControl.buttonIncreaseNominalResistancePressed && !dataControl.buttonDecreaseNominalResistancePressed && !dataTests.buttonIncreaseStartTemperaturePressed && !dataTests.buttonDecreaseStartTemperaturePressed && !dataTests.buttonIncreaseEndTemperaturePressed && !dataTests.buttonDecreaseEndTemperaturePressed && !dataTests.buttonIncreaseRiseTimePressed && !dataTests.buttonDecreaseRiseTimePressed && !dataTests.buttonIncreaseFallTimePressed && !dataTests.buttonDecreaseFallTimePressed && !dataTests.buttonIncreaseRiseStepSizePressed && !dataTests.buttonDecreaseRiseStepSizePressed && !dataTests.buttonIncreaseFallStepSizePressed && !dataTests.buttonDecreaseFallStepSizePressed && !dataTests.buttonIncreaseNumberCyclesPressed && !dataTests.buttonDecreaseNumberCyclesPressed) {
+    buttonPressed = false;
+  } else {
+    if (!buttonPressed) {
+      timeButtonPressed = millis();
+      buttonPressed = true;
+    }
+  }
+}
+
+void printData() {
+  double currentTime = millis();
+  currentTime /= 1000;
+  Serial.print(currentTime - startTime, 4);         Serial.print(", ");
+  Serial.print(controlRunning);                       Serial.print(", ");
+  Serial.print(testRunning);                          Serial.print(", ");
+  Serial.print(Input, 4);                             Serial.print(", ");
+  Serial.print(Setpoint, 1);                          Serial.print(", ");
+  Serial.print(Output, 4);                            Serial.print(", ");
+  Serial.print(dataControl.valueMeasureH2Sensor1, 4); Serial.print(", ");
+  Serial.print(dataControl.valueMeasureH2Sensor2, 4); Serial.println(", ");
+}
+
+void printHeader() {
+  Serial.print("Time (sec), ");
+  Serial.print("Control Running, ");
+  Serial.print("Test Running, ");
+  Serial.print("Current Temperature (°C), ");
+  Serial.print("Set Temperature (°C), ");
+  Serial.print("Output Voltage (V), ");
+  Serial.print("H2 Concentration Sensor 1 (%), ");
+  Serial.println("H2 Concentration Sensor 2 (%), ");
 }
