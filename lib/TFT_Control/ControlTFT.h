@@ -194,40 +194,211 @@ enum class PRESSED_TAB : uint8_t{
 
 class ControlTFT {
 public:
+    //constructor and begin function
+
+    /**************************************************************************/
+    /*!
+        @brief Constructor for the ControlTFT class using the TFT_eSPI library
+    */
+    /**************************************************************************/
     ControlTFT();
+
+    /**************************************************************************/
+    /*!
+        @brief Begin function for the the ControlTFT class initialising all 
+        sprites used with the TFT_eSPI library. Additionally the positions, etc. 
+        of the texts, buttons, values, events and infos to be drawn are defined. 
+    */
+    /**************************************************************************/
     void begin();
 
-    void drawTabSelect(bool init = false);
+    //draw functions
+
+    /**************************************************************************/
+    /*!
+        @brief Draw the selected tab with its backgrounds, buttons and texts.
+        @param initial Defines if the selected tab has to be redrawn.
+    */
+    /**************************************************************************/
+    void drawTabSelect(bool initial = false);
+
+    /**************************************************************************/
+    /*!
+        @brief Update and Draw the buttons and texts for the control tab.
+        @param data Stores all updated sensor data.
+        @return data Retruns the information about pressed buttons
+    */
+    /**************************************************************************/
     controlData drawControlTab(controlData data);
+
+    /**************************************************************************/
+    /*!
+        @brief Update and Draw the buttons and texts for the test tab.
+        @param data Stores all updated sensor data.
+        @return data Retruns the information about pressed buttons
+    */
+    /**************************************************************************/
     testsData drawTestsTab(testsData data);
+
+    /**************************************************************************/
+    /*!
+        @brief Update and Draw the texts for the status tab.
+        @param data Stores all updated status data.
+    */
+    /**************************************************************************/
     void drawStatusTab(statusData data);
+
+    /**************************************************************************/
+    /*!
+        @brief Update and Draw the texts for the control tab.
+        @param data Stores all updated control data.
+    */
+    /**************************************************************************/
     void drawCommandTab(commandData data);
 
+    //return function
+
+    /**************************************************************************/
+    /*!
+        @brief Returns the currently active tab
+        @return currently active tab
+    */
+    /**************************************************************************/
     PRESSED_TAB getTab();
 
+    //reset functions
+
+    /**************************************************************************/
+    /*!
+        @brief Resets the controlRunning task by stopping it and releasing 
+        changing the start buttons colour to its released state
+    */
+    /**************************************************************************/
     void resetControlRunning();
+
+    /**************************************************************************/
+    /*!
+        @brief Resets the testRunning task by stopping it and releasing 
+        changing the start test buttons colour to its released state
+    */
+    /**************************************************************************/
     void resetTestRunning();
 
 private:
-    void touchCalibrate();
+    //touch and button functions
 
+    /**************************************************************************/
+    /*!
+        @brief Check and update which tab is pressed.
+    */
+    /**************************************************************************/
     bool checkTouchTabs();
-    bool inArea(int16_t startX, int16_t startY, int16_t withX, int16_t hightY, int16_t touchX, int16_t touchY);
+
+    /**************************************************************************/
+    /*!
+        @brief Check if button is pressed and draw button
+        @param button Stores all information about the button
+        @param t_x X-Coordinate of the touch press
+        @param t_y Y-Coordinate of the touch press
+        @param pressed True if touchscreen pressed
+        @return button Stores all information about the button
+    */
+    /**************************************************************************/
     button buttonPressed(button button, uint16_t t_x, uint16_t t_y, bool pressed);
+
+    /**************************************************************************/
+    /*!
+        @brief Check if the touch press is in the area of the button
+        @param startX button start position in x direction
+        @param startY button start position in y direction
+        @param withX with of the button
+        @param hightY hight of the button
+        @param touchX X-Coordinate of the touch press
+        @param touchY Y-Coordinate of the touch press
+        @return true if button is pressed
+    */
+    /**************************************************************************/
+    bool inArea(int16_t startX, int16_t startY, int16_t withX, int16_t hightY, int16_t touchX, int16_t touchY);
+
+    /**************************************************************************/
+    /*!
+        @brief Changes the colour of the button to its pressed state and starts 
+        _controlRunning or _testRunning
+        @param button button to be locked
+        @param task task to be started
+    */
+    /**************************************************************************/
     void lockButton(button* lock, bool* task);
+
+    /**************************************************************************/
+    /*!
+        @brief Changes the colour of the button to its released state and stops 
+        _controlRunning or _testRunning
+        @param button button to be released
+        @param task task to be stopped
+    */
+    /**************************************************************************/
     void releaseButton(button action, button* release, bool* task);
 
+    //draw functions
+
+    /**************************************************************************/
+    /*!
+        @brief Draws the button
+        @param button button to br drawn
+    */
+    /**************************************************************************/
     void drawButton(button button);
+
+    /**************************************************************************/
+    /*!
+        @brief Draws the text
+        @param text text to be drawn
+        @param position position of the text in its field
+    */
+    /**************************************************************************/
     void drawText(text text, uint8_t position);
+
+    /**************************************************************************/
+    /*!
+        @brief Draws the value
+        @param value value to be drawn
+        @param position position of the text in its field
+    */
+    /**************************************************************************/
     void drawValue(value value, uint8_t position);
+
+    /**************************************************************************/
+    /*!
+        @brief Draws the event
+        @param event event to be drawn
+    */
+    /**************************************************************************/
     void drawEvent(event event);
+
+    /**************************************************************************/
+    /*!
+        @brief Draws the info
+        @param info info to be drawn
+    */
+    /**************************************************************************/
     void drawInfo(info info);
 
-    bool _testRunning;
-    bool _controlRunning;
-    bool _measurementH2Sensor1Running;
-    bool _measurementH2Sensor2Running;
+    //calibrate function
 
+    /**************************************************************************/
+    /*!
+        @brief Calibrate the orientation of the touchscreen
+    */
+    /**************************************************************************/
+    void touchCalibrate();
+
+    bool _testRunning;                  //status to indicate if test is running
+    bool _controlRunning;               //status to indicate if control is running
+    bool _measurementH2Sensor1Running;  //status to indicate if H2 Sensor 1 is used
+    bool _measurementH2Sensor2Running;  //status to indicate if H2 Sensor 2 is used
+
+    //tab struct for the different tabs
     struct tab _controlTab;
     struct tab _testsTab;
     struct tab _statusTab;

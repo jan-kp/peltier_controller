@@ -9,11 +9,23 @@
 
 #include "ControlTFT.h"
 
+/**************************************************************************/
+/*!
+    @brief Constructor for the ControlTFT class using the TFT_eSPI library
+*/
+/**************************************************************************/
 ControlTFT::ControlTFT() : _tabSelect(&_tft), _background(&_tft), _button(&_tft), _text(&_tft), _value(&_tft), _event(&_tft),  _info(&_tft) {
   _tft.init();
   _tft.setRotation(1); 
 }
 
+/**************************************************************************/
+/*!
+    @brief Begin function for the the ControlTFT class initialising all 
+    sprites used with the TFT_eSPI library. Additionally the positions, etc. 
+    of the texts, buttons, values, events and infos to be drawn are defined. 
+*/
+/**************************************************************************/
 void ControlTFT::begin(){
   _testRunning = false;
   _controlRunning = false;
@@ -22,6 +34,7 @@ void ControlTFT::begin(){
   _tft.fillScreen(TFT_BLACK);
   _tft.fillRoundRect(0, 0, 480, 320, 15, LIGHT_GREY);
 
+  //set the text position of the sprites to MC_DATUM
   _tabSelect.setTextDatum(4);
   _background.setTextDatum(4);
   _button.setTextDatum(4);
@@ -30,6 +43,7 @@ void ControlTFT::begin(){
   _event.setTextDatum(4);
   _info.setTextDatum(4);
 
+  //set the text size of the prites to 2
   _tabSelect.setTextSize(2);
   _background.setTextSize(2);
   _button.setTextSize(2);
@@ -38,6 +52,7 @@ void ControlTFT::begin(){
   _event.setTextSize(2);
   _info.setTextSize(2);
 
+  //information about the diffentent tabs
   _controlTab = {5,   5, 113, 35, 10, BLACK, LIGHT_GREY, GREY, true};
   _testsTab   = {124, 5, 113, 35, 10, BLACK, LIGHT_GREY, GREY, false};
   _statusTab  = {243, 5, 113, 35, 10, BLACK, LIGHT_GREY, GREY, false};
@@ -166,7 +181,13 @@ void ControlTFT::begin(){
   _infoPowerLimit          = {0x0, 300, 275, 120, 20, BLACK, TFT_WHITE, "2W", "No Limit", "3W", "3.5W"};
 }
 
-void ControlTFT::drawTabSelect(bool init) {
+/**************************************************************************/
+/*!
+    @brief Draw the selected tab with its backgrounds, buttons and texts.
+    @param initial Defines if the selected tab has to be redrawn.
+*/
+/**************************************************************************/
+void ControlTFT::drawTabSelect(bool initial) {
   bool changedTab = checkTouchTabs();
 
   if (changedTab || init) {
@@ -376,10 +397,19 @@ void ControlTFT::drawTabSelect(bool init) {
   }
 }
 
+
+/**************************************************************************/
+/*!
+    @brief Update and Draw the buttons and texts for the control tab.
+    @param data Stores all updated sensor data.
+    @return data Retruns the information about pressed buttons
+*/
+/**************************************************************************/
 controlData ControlTFT::drawControlTab(controlData data) {
   uint16_t t_x = 0, t_y = 0;                 // To store the touch coordinates
   bool pressed = _tft.getTouch(&t_x, &t_y);  // Pressed will be set true is there is a valid touch on the screen
 
+  //update values
   _valueChipTemperature.value    = data.valueChipTemperature;
   _valueOutputVoltage.value      = data.valueOutputVoltage;
   _valueOutputCurrent.value      = data.valueOutputCurrent;
@@ -389,6 +419,7 @@ controlData ControlTFT::drawControlTab(controlData data) {
   _valueSetTemperature.value     = data.valueSetTemperature;
   _valueCurrentTemperature.value = data.valueCurrentTemperature;
 
+  //draw values
   drawValue(_valueChipTemperature, MC_DATUM);
   drawValue(_valueOutputVoltage, MC_DATUM);
   drawValue(_valueOutputCurrent, MC_DATUM);
@@ -398,10 +429,13 @@ controlData ControlTFT::drawControlTab(controlData data) {
   drawValue(_valueSetTemperature, MC_DATUM);
   drawValue(_valueCurrentTemperature, MC_DATUM);
 
+  //update event
   _eventCommunicationError.bit = data.eventCommunicationError;
 
+  //draw event
   drawEvent(_eventCommunicationError);
 
+  //check and update button press
   _buttonMeasureH2Sensor1Stop = buttonPressed(_buttonMeasureH2Sensor1Stop, t_x, t_y, pressed);
   data.buttonMeasureH2Sensor1StopPressed = _buttonMeasureH2Sensor1Stop.pressed;
   releaseButton(_buttonMeasureH2Sensor1Stop, &_buttonMeasureH2Sensor1Start, &_measurementH2Sensor1Running);
@@ -448,10 +482,18 @@ controlData ControlTFT::drawControlTab(controlData data) {
   return data;
 }
 
+/**************************************************************************/
+/*!
+    @brief Update and Draw the buttons and texts for the test tab.
+    @param data Stores all updated sensor data.
+    @return data Retruns the information about pressed buttons
+*/
+/**************************************************************************/
 testsData ControlTFT::drawTestsTab(testsData data) {
   uint16_t t_x = 0, t_y = 0;                 // To store the touch coordinates
   bool pressed = _tft.getTouch(&t_x, &t_y);  // Pressed will be set true is there is a valid touch on the screen
 
+  //update values
   _valueStartTemperature.value  = data.valueStartTemperature; 
   _valueEndTemperature.value    = data.valueEndTemperature;   
   _valueRiseTime.value          = data.valueRiseTime;
@@ -459,10 +501,9 @@ testsData ControlTFT::drawTestsTab(testsData data) {
   _valueRiseStepSize.value      = data.valueRiseStepSize;
   _valueFallStepSize.value      = data.valueFallStepSize;
   _valueNumberCycles.value      = data.valueNumberCycles;
-  _valueProgress.value           = data.valueProgress;
+  _valueProgress.value          = data.valueProgress;
 
-  _infoInformation.bits         = data.infoInformation;
-
+  //draw values
   drawValue(_valueStartTemperature , MC_DATUM);
   drawValue(_valueEndTemperature   , MC_DATUM);
   drawValue(_valueRiseTime         , MC_DATUM);
@@ -472,8 +513,13 @@ testsData ControlTFT::drawTestsTab(testsData data) {
   drawValue(_valueNumberCycles     , MC_DATUM);
   drawValue(_valueProgress         , MC_DATUM);
 
+  //update info
+  _infoInformation.bits         = data.infoInformation;
+
+  //draw info
   drawInfo(_infoInformation);
 
+  //check and update button press
   if (!_controlRunning) {
     if (!_testRunning){
       _buttonDecreaseStartTemperature = buttonPressed(_buttonDecreaseStartTemperature, t_x, t_y, pressed);
@@ -536,7 +582,15 @@ testsData ControlTFT::drawTestsTab(testsData data) {
   return data;      
 }
 
+/**************************************************************************/
+/*!
+    @brief Update and Draw the texts for the status tab.
+    @param data Stores all updated status data.
+*/
+/**************************************************************************/
 void ControlTFT::drawStatusTab(statusData data) {
+
+  //update values
   _eventPWMSwitchingEvent.bit      = data.eventPWMSwitchingEvent;
   _eventCurrentLimitEvent.bit      = data.eventCurrentLimitEvent;
   _eventPowerLimitEvent.bit        = data.eventPowerLimitEvent;
@@ -546,6 +600,7 @@ void ControlTFT::drawStatusTab(statusData data) {
   _eventVCCUnderVoltageEvent.bit   = data.eventVCCUnderVoltageEvent;
   _eventVDDIOUnderVOltageEvent.bit = data.eventVDDIOUnderVOltageEvent;
 
+  //draw values
   drawEvent(_eventPWMSwitchingEvent);
   drawEvent(_eventCurrentLimitEvent);
   drawEvent(_eventPowerLimitEvent);
@@ -556,21 +611,32 @@ void ControlTFT::drawStatusTab(statusData data) {
   drawEvent(_eventVDDIOUnderVOltageEvent);
 }
 
+/**************************************************************************/
+/*!
+    @brief Update and Draw the texts for the control tab.
+    @param data Stores all updated control data.
+*/
+/**************************************************************************/
 void ControlTFT::drawCommandTab(commandData data) {
+
+  //update events
   _eventPowerStage.bit    = data.eventPowerStage;
   _eventPWMSwitching.bit  = data.eventPWMSwitching;
   _eventLDORegulation.bit = data.eventLDORegulation;
 
+  //draw events
+  drawEvent(_eventPowerStage);
+  drawEvent(_eventPWMSwitching);
+  drawEvent(_eventLDORegulation);
+
+  //update info
   _infoPWMFrequency.bits        = data.infoPWMFrequency;
   _infoPWMAdjust.bits           = data.infoPWMAdjust;
   _infoPWMDutyCycle.bits        = data.infoPWMDutyCycle;
   _infoPeakInductorCurrent.bits = data.infoPeakInductorCurrent;
   _infoPowerLimit.bits          = data.infoPowerLimit;
 
-  drawEvent(_eventPowerStage);
-  drawEvent(_eventPWMSwitching);
-  drawEvent(_eventLDORegulation);
-
+  //draw info
   drawInfo(_infoPWMFrequency);
   drawInfo(_infoPWMAdjust);
   drawInfo(_infoPWMDutyCycle);
@@ -578,6 +644,53 @@ void ControlTFT::drawCommandTab(commandData data) {
   drawInfo(_infoPowerLimit);
 }
 
+/**************************************************************************/
+/*!
+    @brief Returns the currently active tab
+    @return currently active tab
+*/
+/**************************************************************************/
+PRESSED_TAB ControlTFT::getTab() {
+  if (_testsTab.pressed) {
+    return PRESSED_TAB::TESTS;
+  } else if (_statusTab.pressed) {
+    return PRESSED_TAB::STATUS;
+  } else if (_commandTab.pressed) {
+    return PRESSED_TAB::COMMAND;
+  } else {
+    return PRESSED_TAB::CONTROL;
+  }
+}
+
+/**************************************************************************/
+/*!
+    @brief Resets the controlRunning task by stopping it and releasing 
+    changing the start buttons colour to its released state
+*/
+/**************************************************************************/
+void ControlTFT::resetControlRunning() {
+  _controlRunning = false;
+  _buttonStart.backgroundColor = LIGHT_GREY;
+  _buttonStart.pressed = true;
+}
+
+/**************************************************************************/
+/*!
+    @brief Resets the testRunning task by stopping it and releasing 
+    changing the start test buttons colour to its released state
+*/
+/**************************************************************************/
+void ControlTFT::resetTestRunning() {
+  _testRunning = false;
+  _buttonStartTest.backgroundColor = LIGHT_GREY;
+  _buttonStartTest.pressed = true;
+}
+
+/**************************************************************************/
+/*!
+    @brief Check and update which tab is pressed.
+*/
+/**************************************************************************/
 bool ControlTFT::checkTouchTabs() {
   uint16_t t_x = 0, t_y = 0;                 // To store the touch coordinates
   bool pressed = _tft.getTouch(&t_x, &t_y);  // Pressed will be set true is there is a valid touch on the screen
@@ -623,6 +736,16 @@ bool ControlTFT::checkTouchTabs() {
   return false;
 }
 
+/**************************************************************************/
+/*!
+    @brief Check if button is pressed and draw button
+    @param button Stores all information about the button
+    @param t_x X-Coordinate of the touch press
+    @param t_y Y-Coordinate of the touch press
+    @param pressed True if touchscreen pressed
+    @return button Stores all information about the button
+*/
+/**************************************************************************/
 button ControlTFT::buttonPressed(button button, uint16_t t_x, uint16_t t_y, bool pressed) {
   button.previouslyPressed = button.pressed; 
   if (pressed & inArea(button.startX, button.startY, button.withX, button.hightY, t_x, t_y)) {
@@ -638,11 +761,61 @@ button ControlTFT::buttonPressed(button button, uint16_t t_x, uint16_t t_y, bool
   return button;
 }
 
+/**************************************************************************/
+/*!
+    @brief Check if the touch press is in the area of the button
+    @param startX button start position in x direction
+    @param startY button start position in y direction
+    @param withX with of the button
+    @param hightY hight of the button
+    @param touchX X-Coordinate of the touch press
+    @param touchY Y-Coordinate of the touch press
+    @return true if button is pressed
+*/
+/**************************************************************************/
 bool ControlTFT::inArea(int16_t startX, int16_t startY, int16_t withX, int16_t hightY, int16_t touchX, int16_t touchY) {
   return ((touchX >= startX) && (touchX < (startX + withX)) &&
           (touchY >= startY) && (touchY < (startY + hightY)));
 }
 
+/**************************************************************************/
+/*!
+    @brief Changes the colour of the button to its pressed state and starts 
+    _controlRunning or _testRunning
+    @param button button to be locked
+    @param task task to be started
+*/
+/**************************************************************************/
+void ControlTFT::lockButton(button* lock, bool* task) {
+  if ((*lock).pressed) {
+    *task = true;
+    (*lock).backgroundColor = BLUE;
+    drawButton(*lock);
+  }
+}
+
+/**************************************************************************/
+/*!
+    @brief Changes the colour of the button to its released state and stops 
+    _controlRunning or _testRunning
+    @param button button to be released
+    @param task task to be stopped
+*/
+/**************************************************************************/
+void ControlTFT::releaseButton(button action, button* release, bool* task) {
+  if (action.pressed) {
+    *task =false;
+    (*release).backgroundColor = LIGHT_GREY;
+    drawButton(*release);
+  }
+}
+
+/**************************************************************************/
+/*!
+    @brief Draws the button
+    @param button button to br drawn
+*/
+/**************************************************************************/
 void ControlTFT::drawButton(button button) {
   if (button.pressed) {
     _button.createSprite(button.withX, button.hightY);
@@ -661,22 +834,13 @@ void ControlTFT::drawButton(button button) {
   }
 }
 
-void ControlTFT::lockButton(button* lock, bool* task) {
-  if ((*lock).pressed) {
-    *task = true;
-    (*lock).backgroundColor = BLUE;
-    drawButton(*lock);
-  }
-}
-
-void ControlTFT::releaseButton(button action, button* release, bool* task) {
-  if (action.pressed) {
-    *task =false;
-    (*release).backgroundColor = LIGHT_GREY;
-    drawButton(*release);
-  }
-}
-
+/**************************************************************************/
+/*!
+    @brief Draws the text
+    @param text text to be drawn
+    @param position position of the text in its field
+*/
+/**************************************************************************/
 void ControlTFT::drawText(text text, uint8_t position) {
   _text.setTextDatum(position);
   _text.createSprite(text.withX, text.hightY);
@@ -719,6 +883,13 @@ void ControlTFT::drawText(text text, uint8_t position) {
   _text.deleteSprite();
 }
 
+/**************************************************************************/
+/*!
+    @brief Draws the value
+    @param value value to be drawn
+    @param position position of the text in its field
+*/
+/**************************************************************************/
 void ControlTFT::drawValue(value value, uint8_t position) {
   _value.setTextDatum(position);
   _value.createSprite(value.withX, value.hightY);
@@ -761,6 +932,12 @@ void ControlTFT::drawValue(value value, uint8_t position) {
   _value.deleteSprite();
 }
 
+/**************************************************************************/
+/*!
+    @brief Draws the event
+    @param event event to be drawn
+*/
+/**************************************************************************/
 void ControlTFT::drawEvent(event event) {
   _event.createSprite(event.withX, event.hightY);
   
@@ -778,6 +955,12 @@ void ControlTFT::drawEvent(event event) {
   _event.deleteSprite();
 }
 
+/**************************************************************************/
+/*!
+    @brief Draws the info
+    @param info info to be drawn
+*/
+/**************************************************************************/
 void ControlTFT::drawInfo(info info) {
   _info.createSprite(info.withX, info.hightY);
   _info.fillRoundRect(0, 0, info.withX, info.hightY, 10, info.backgroundColor);
@@ -816,6 +999,11 @@ void ControlTFT::drawInfo(info info) {
   _info.deleteSprite();
 }
 
+/**************************************************************************/
+/*!
+    @brief Calibrate the orientation of the touchscreen
+*/
+/**************************************************************************/
 void ControlTFT::touchCalibrate()
 {
   uint16_t calData[5];
@@ -879,28 +1067,4 @@ void ControlTFT::touchCalibrate()
       f.close();
     }
   }
-}
-
-PRESSED_TAB ControlTFT::getTab() {
-  if (_testsTab.pressed) {
-    return PRESSED_TAB::TESTS;
-  } else if (_statusTab.pressed) {
-    return PRESSED_TAB::STATUS;
-  } else if (_commandTab.pressed) {
-    return PRESSED_TAB::COMMAND;
-  } else {
-    return PRESSED_TAB::CONTROL;
-  }
-}
-
-void ControlTFT::resetControlRunning() {
-  _controlRunning = false;
-  _buttonStart.backgroundColor = LIGHT_GREY;
-  _buttonStart.pressed = true;
-}
-
-void ControlTFT::resetTestRunning() {
-  _testRunning = false;
-  _buttonStartTest.backgroundColor = LIGHT_GREY;
-  _buttonStartTest.pressed = true;
 }
