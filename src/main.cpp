@@ -99,13 +99,47 @@ void printHeader();
 void taskcompute_loop(void * parameter) {
   bool MeasurementH2Sensor1Running = false; //indicates if the H2 Sensor 1 measurement is on
   bool MeasurementH2Sensor2Running = false; //indicates if the H2 Sensor 2 measurement is on
-  uint8_t token = 0;                        //round toke to not update specific value every round                      
+  uint8_t tokenControl = 0;                 //round token to not update specific value every round in control tab   
+  uint8_t tokenGlobal = 0;                  //round token to not update specific value every round while data logging                       
 
   for( ;; ) {
     checkButtonPressed(); //check if any button is pressed for the first time
 
     //turn on data logging if control or test is running
     if (controlRunning || testRunning) {
+
+      //update the value only if it has the token
+      if (tokenGlobal == 0) {
+        dataControl.valueChipTemperature = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::TEMPERATURE);
+        tokenGlobal = 1;
+      } else if (tokenGlobal == 1) {
+        dataControl.valueOutputVoltage = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::VOLTAGE);
+        tokenGlobal = 2;
+      } else if (tokenGlobal == 2) {
+        dataControl.valueOutputCurrent = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::CURRENT);
+        tokenGlobal = 0;
+      } else {
+        tokenGlobal = 0;
+      }
+
+      //Measure H2 Sensor 1
+      if (MeasurementH2Sensor2Running) {
+        double voltage = analogRead(H2SENSOR1);
+        voltage /= 1000;
+        dataControl.valueMeasureH2Sensor1 = voltage;
+      } else {
+        dataControl.valueMeasureH2Sensor1 = 0.0;
+      }
+
+       //Measure H2 Sensor 2
+      if (MeasurementH2Sensor2Running) {
+        double voltage = analogRead(H2SENSOR2);
+        voltage /= 1000;
+        dataControl.valueMeasureH2Sensor2 = voltage;
+      } else {
+        dataControl.valueMeasureH2Sensor2 = 0.0;
+      }
+      
       printData();
     }
 
@@ -125,20 +159,20 @@ void taskcompute_loop(void * parameter) {
         dataControl.valueSetTemperature     = Setpoint;
 
         //update the value only if it has the token
-        if (token == 0) {
+        if (tokenControl == 0) {
           dataControl.valueChipTemperature = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::TEMPERATURE);
-          token = 1;
-        } else if (token == 1) {
+          tokenControl = 1;
+        } else if (tokenControl == 1) {
           dataControl.valueOutputVoltage = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::VOLTAGE);
-          token = 2;
-        } else if (token == 2) {
+          tokenControl = 2;
+        } else if (tokenControl == 2) {
           dataControl.valueOutputCurrent = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::CURRENT);
-          token = 3;
-        } else if (token == 3) {
+          tokenControl = 3;
+        } else if (tokenControl == 3) {
           dataControl.valueCurrentTemperature = pt1000.temperature(nominalResistance, refResistance);
-          token = 0;
+          tokenControl = 0;
         } else {
-          token = 0;
+          tokenControl = 0;
         }
         
         if(dataControl.buttonMeasureH2Sensor1StartPressed) {
@@ -625,14 +659,15 @@ void checkButtonPressed() {
 void printData() {
   double currentTime = millis();
   currentTime /= 1000;
-  Serial.print(currentTime - startTime, 4);         Serial.print(", ");
-  Serial.print(controlRunning);                       Serial.print(", ");
-  Serial.print(testRunning);                          Serial.print(", ");
+  Serial.print(currentTime - startTime, 4);           Serial.print(", ");
   Serial.print(Input, 4);                             Serial.print(", ");
   Serial.print(Setpoint, 1);                          Serial.print(", ");
   Serial.print(Output, 4);                            Serial.print(", ");
   Serial.print(dataControl.valueMeasureH2Sensor1, 4); Serial.print(", ");
-  Serial.print(dataControl.valueMeasureH2Sensor2, 4); Serial.println(", ");
+  Serial.print(dataControl.valueMeasureH2Sensor2, 4); Serial.print(", ");
+  Serial.print(dataControl.valueOutputVoltage, 2);    Serial.print(", ");
+  Serial.print(dataControl.valueOutputCurrent, 2);    Serial.print(", ");
+  Serial.println(dataControl.valueChipTemperature, 2);
 }
 
 /**************************************************************************/
@@ -641,12 +676,38 @@ void printData() {
 */
 /**************************************************************************/
 void printHeader() {
+  Serial.println("----------------------------------------------------");
+  Serial.println("");
+
+  if (controlRunning) {
+    Serial.println("----------------------------------------------------");
+    Serial.println("Control Running:");
+    Serial.println("----------------------------------------------------");
+  } else if (testRunning) {
+    Serial.println("----------------------------------------------------");
+    Serial.println("Test Running:");
+    Serial.println("----------------------------------------------------");
+    Serial.print("Start Temperature:"); Serial.println(startTemperature, 2);
+    Serial.print("End Temperature:  "); Serial.println(endTemperature, 2);
+    Serial.print("Rise Time:        "); Serial.println(riseTime, 2);
+    Serial.print("Fall Time:        "); Serial.println(fallTime, 2);
+    Serial.print("Rise Step Size:   "); Serial.println(riseStepSize, 2);
+    Serial.print("Fall Step Size:   "); Serial.println(fallStepSize, 2);
+    Serial.print("Number Cycles:    "); Serial.println(numberCycles, 2);
+    Serial.println("----------------------------------------------------");
+  } else {
+    Serial.println("----------------------------------------------------");
+    Serial.println("ERROR:");
+    Serial.println("----------------------------------------------------");
+  }
+
   Serial.print("Time (sec), ");
-  Serial.print("Control Running, ");
-  Serial.print("Test Running, ");
   Serial.print("Current Temperature (°C), ");
   Serial.print("Set Temperature (°C), ");
-  Serial.print("Output Voltage (V), ");
+  Serial.print("PID Output Voltage (V), ");
   Serial.print("H2 Concentration Sensor 1 (%), ");
-  Serial.println("H2 Concentration Sensor 2 (%), ");
+  Serial.print("H2 Concentration Sensor 2 (%), ");
+  Serial.print("Analog Voltage Output (V), ");
+  Serial.print("Analog Current Output (A), ");
+  Serial.println("Analog Chip Temperature (°C)");
 }
