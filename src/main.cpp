@@ -18,6 +18,7 @@
  * Date: 2025-01-28 Author: Jan kleine Piening Comments: Added added data logging and improved test behavior
  * Date: 2025-01-28 Author: Jan kleine Piening Comments: Added docs: added more comments
  * Date: 2025-01-29 Author: Jan kleine Piening Comments: Added docs: improved comments
+ * Date: 2025-01-29 Author: Jan kleine Piening Comments: Added docs: added README
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
