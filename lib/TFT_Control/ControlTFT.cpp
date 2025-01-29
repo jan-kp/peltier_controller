@@ -220,6 +220,7 @@ void ControlTFT::drawTabSelect(bool initial) {
       _background.pushSprite(0, 60, TFT_BLACK);
       _background.deleteSprite();
 
+      //draw texts, values, buttons, events and infos
       drawText(_textChipTemperature, MC_DATUM);
       drawText(_textOutputVoltage, MC_DATUM);
       drawText(_textOutputCurrent, MC_DATUM);
@@ -277,6 +278,7 @@ void ControlTFT::drawTabSelect(bool initial) {
       _background.pushSprite(0, 60, TFT_BLACK);
       _background.deleteSprite();
 
+      //draw texts, values, buttons, events and infos
       drawText(_textStartTemperature, ML_DATUM);
       drawValue(_valueStartTemperature, MC_DATUM);
       drawButton(_buttonDecreaseStartTemperature);
@@ -339,6 +341,7 @@ void ControlTFT::drawTabSelect(bool initial) {
       _background.pushSprite(0, 60, TFT_BLACK);
       _background.deleteSprite();
 
+      //draw texts, values, buttons, events and infos
       drawText(_textPWMSwitchingEvent, ML_DATUM);
       drawText(_textCurrentLimitEvent, ML_DATUM);
       drawText(_textPowerLimitEvent, ML_DATUM);
@@ -375,6 +378,7 @@ void ControlTFT::drawTabSelect(bool initial) {
       _background.pushSprite(0, 60, TFT_BLACK);
       _background.deleteSprite();
 
+      //draw texts, values, buttons, events and infos
       drawText(_textPowerStage, ML_DATUM);
       drawText(_textPWMSwitching, ML_DATUM);
       drawText(_textPWMFrequency, ML_DATUM);
@@ -452,6 +456,7 @@ controlData ControlTFT::drawControlTab(controlData data) {
   data.buttonMeasureH2Sensor2StartPressed = _buttonMeasureH2Sensor2Start.pressed;
   lockButton(&_buttonMeasureH2Sensor2Start, &_measurementH2Sensor2Running);
 
+  //buttons can only be pressed if no test is running
   if (!_testRunning) {
     _buttonDecreaseNominalResistance = buttonPressed(_buttonDecreaseNominalResistance, t_x, t_y, pressed);
     data.buttonDecreaseNominalResistancePressed = _buttonDecreaseNominalResistance.pressed;
@@ -519,8 +524,10 @@ testsData ControlTFT::drawTestsTab(testsData data) {
   //draw info
   drawInfo(_infoInformation);
 
-  //check and update button press
+  //check and update button press if control is not running
   if (!_controlRunning) {
+    
+    //buttons can only be pressed if no test is running
     if (!_testRunning){
       _buttonDecreaseStartTemperature = buttonPressed(_buttonDecreaseStartTemperature, t_x, t_y, pressed);
       data.buttonDecreaseStartTemperaturePressed = _buttonDecreaseStartTemperature.pressed;
@@ -669,9 +676,9 @@ PRESSED_TAB ControlTFT::getTab() {
 */
 /**************************************************************************/
 void ControlTFT::resetControlRunning() {
-  _controlRunning = false;
-  _buttonStart.backgroundColor = LIGHT_GREY;
-  _buttonStart.pressed = true;
+  _controlRunning = false;                    //turn control running off
+  _buttonStart.backgroundColor = LIGHT_GREY;  //reset the colour of the start button (blue to lightgrey)
+  _buttonStart.pressed = true;                //set start button pressed to true to redraw th button
 }
 
 /**************************************************************************/
@@ -681,9 +688,9 @@ void ControlTFT::resetControlRunning() {
 */
 /**************************************************************************/
 void ControlTFT::resetTestRunning() {
-  _testRunning = false;
-  _buttonStartTest.backgroundColor = LIGHT_GREY;
-  _buttonStartTest.pressed = true;
+  _testRunning = false;                           //turn test running off
+  _buttonStartTest.backgroundColor = LIGHT_GREY;  //reset the colour of the start test button (blue to lightgrey)
+  _buttonStartTest.pressed = true;                //set start test button pressed to true to redraw th button
 }
 
 /**************************************************************************/
@@ -692,9 +699,10 @@ void ControlTFT::resetTestRunning() {
 */
 /**************************************************************************/
 bool ControlTFT::checkTouchTabs() {
-  uint16_t t_x = 0, t_y = 0;                 // To store the touch coordinates
-  bool pressed = _tft.getTouch(&t_x, &t_y);  // Pressed will be set true is there is a valid touch on the screen
+  uint16_t t_x = 0, t_y = 0;                 // store the touch coordinates
+  bool pressed = _tft.getTouch(&t_x, &t_y);  // pressed will be set true is there is a valid touch on the screen
 
+  //check if any tab area is pressed and if tab is already drawn with previousPRedd
   if (pressed & inArea(_controlTab.startX, _controlTab.startY, _controlTab.withX, _controlTab.hightY, t_x, t_y)) {
     bool previousPress = _controlTab.pressed;
 
@@ -748,10 +756,14 @@ bool ControlTFT::checkTouchTabs() {
 /**************************************************************************/
 button ControlTFT::buttonPressed(button button, uint16_t t_x, uint16_t t_y, bool pressed) {
   button.previouslyPressed = button.pressed; 
+
+  //if button is pressed mark button as pressed and draw its select colour
   if (pressed & inArea(button.startX, button.startY, button.withX, button.hightY, t_x, t_y)) {
       button.pressed = true;
       drawButton(button);
   } else {
+
+      //only mark button as not pressed and redraw it if the button was previously pressed
       if (button.pressed == true) {
         button.pressed = false;
         drawButton(button);
@@ -788,9 +800,9 @@ bool ControlTFT::inArea(int16_t startX, int16_t startY, int16_t withX, int16_t h
 /**************************************************************************/
 void ControlTFT::lockButton(button* lock, bool* task) {
   if ((*lock).pressed) {
-    *task = true;
-    (*lock).backgroundColor = BLUE;
-    drawButton(*lock);
+    *task = true;                   //set the task running to true
+    (*lock).backgroundColor = BLUE; //change the background colour of the tasks start button to blue
+    drawButton(*lock);              //redraw button
   }
 }
 
@@ -804,9 +816,9 @@ void ControlTFT::lockButton(button* lock, bool* task) {
 /**************************************************************************/
 void ControlTFT::releaseButton(button action, button* release, bool* task) {
   if (action.pressed) {
-    *task =false;
-    (*release).backgroundColor = LIGHT_GREY;
-    drawButton(*release);
+    *task =false;                             //set the task running to false
+    (*release).backgroundColor = LIGHT_GREY;  //change the background colour of the tasks start button to lightgrey
+  drawButton(*release);                       //redraw button
   }
 }
 

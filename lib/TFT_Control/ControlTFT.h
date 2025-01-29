@@ -32,6 +32,7 @@
 #define GREEN 0x2E0F
 #define BLACK 0x1000
 
+//store all information regarding each tab
 struct tab {
     int32_t startX;
     int32_t startY;
@@ -44,6 +45,7 @@ struct tab {
     bool pressed;
 };
 
+//store all information regarding each button
 struct button {
     char* name;
     int32_t startX;
@@ -58,6 +60,7 @@ struct button {
     bool previouslyPressed;
 };
 
+//store all information regarding each text
 struct text {
     char* name;
     int32_t startX;
@@ -68,6 +71,7 @@ struct text {
     uint32_t backgroundColor;
 };
 
+//store all information regarding each value
 struct value {
     double value;
     int32_t startX;
@@ -78,6 +82,7 @@ struct value {
     uint32_t backgroundColor;
 };
 
+//store all information regarding each event (1 bit info)
 struct event {
     bool bit;
     char* noEvent;
@@ -91,6 +96,7 @@ struct event {
     uint32_t backgroundColor;
 };
 
+//store all information regarding each info
 struct info {
     uint8_t bits;
     int32_t startX;
@@ -109,6 +115,7 @@ struct info {
     char* info7;
 };
 
+//store all information of the control tab that can be updated
 struct controlData {
     double valueChipTemperature;
     double valueOutputVoltage;
@@ -133,6 +140,7 @@ struct controlData {
     bool   buttonStartPreviouslyPressed;
 };
 
+//store all information of the tests tab that can be updated
 struct testsData {
     double  valueStartTemperature;
     double  valueEndTemperature;
@@ -163,6 +171,7 @@ struct testsData {
     uint8_t infoInformation;
 };
 
+//store all information of the status tab that can be updated
 struct statusData {
     bool eventPWMSwitchingEvent;
     bool eventCurrentLimitEvent;
@@ -174,6 +183,7 @@ struct statusData {
     bool eventVDDIOUnderVOltageEvent;
 };
 
+//store all information of the control tab that can be updated
 struct commandData {
     bool    eventPowerStage;
     bool    eventPWMSwitching;
@@ -185,6 +195,7 @@ struct commandData {
     uint8_t infoPowerLimit;
 };
 
+//store which tab is pressed
 enum class PRESSED_TAB : uint8_t{
     CONTROL,
     TESTS,
@@ -526,6 +537,7 @@ private:
     struct info _infoPeakInductorCurrent;
     struct info _infoPowerLimit;
 
+    //sprites for the tft display
     TFT_eSPI _tft;
     TFT_eSprite _tabSelect;
     TFT_eSprite _background;

@@ -12,6 +12,12 @@
  * Revision History:
  * Date: 2025-01-06 Author: Jan kleine Piening Comments: Initial version created
  * Date: 2025-01-21 Author: Jan kleine Piening Comments: Added temperature reading and PID control
+ * Date: 2025-01-22 Author: Jan kleine Piening Comments: Added ControlTFT class to control the display with own widgets
+ * Date: 2025-01-24 Author: Jan kleine Piening Comments: added control, tests, status and command tab
+ * Date: 2025-01-27 Author: Jan kleine Piening Comments: Added finalized tests tab
+ * Date: 2025-01-28 Author: Jan kleine Piening Comments: Added added data logging and improved test behavior
+ * Date: 2025-01-28 Author: Jan kleine Piening Comments: Added docs: added more comments
+ * Date: 2025-01-29 Author: Jan kleine Piening Comments: Added docs: improved comments
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -30,68 +36,79 @@
 #define H2SENSOR1 15
 #define H2SENSOR2 16
 
+//taskhandle for the different tasks
 TaskHandle_t TaskCompute;
 TaskHandle_t TaskDisplay;
 TaskHandle_t TaskPID;
 TaskHandle_t TaskTest;
 
+//semaphores to make the data transfer between the tasks possible
 SemaphoreHandle_t SemaphoreDataControl;
 SemaphoreHandle_t SemaphoreDataTests;
 SemaphoreHandle_t SemaphoreDataStatus;
 SemaphoreHandle_t SemaphoreDataCommand;
 SemaphoreHandle_t SemaphoreDataPID;
 
-LT8722 peltierDriver;                                           //create a LT8722 object with FSPI
+LT8722 peltierDriver;                                     //create a LT8722 object with FSPI
 
 SPIClass fspi(FSPI);
-Adafruit_MAX31865 pt1000 = Adafruit_MAX31865(9, &fspi);         //create a Adafruit_MAX31865 object with FSPI
+Adafruit_MAX31865 pt1000 = Adafruit_MAX31865(9, &fspi);   //create a Adafruit_MAX31865 object with FSPI
 
-float Kp = 0.09, Ki = 0.25, Kd = 0;                             //PID tuning parameters 
-float Setpoint = 10, Input, Output;                             //variables for PID      
-QuickPID peltierPID(&Input, &Output, &Setpoint);                //specify PID links
+float Kp = 0.09, Ki = 0.25, Kd = 0;                       //PID tuning parameters 
+float Setpoint = 10, Input, Output;                       //variables for PID      
+QuickPID peltierPID(&Input, &Output, &Setpoint);          //specify PID links
 
-ControlTFT display;
+ControlTFT display;                                       //create a TFT_eSPI object
 
-const float refResistance = 4300.0;                             //the value of the Rref resistor
-float nominalResistance   = 940;                                //the 'nominal' 0-degrees-C resistance of the sensor
+const float refResistance = 4300.0;                       //the value of the Rref resistor
+float nominalResistance   = 940;                          //the 'nominal' 0-degrees-C resistance of the sensor
 
-float startTemperature = 0.0;
-float endTemperature   = 60.0;
-float riseTime         = 30.0;
-float fallTime         = 30.0;
-float riseStepSize     = 0.5;
-float fallStepSize     = 0.5;
-float numberCycles     = 5.0;
+float startTemperature = 0.0;                             //start temperature for the tests
+float endTemperature   = 60.0;                            //end temperature for the tests
+float riseTime         = 30.0;                            //rise time for the tests
+float fallTime         = 30.0;                            //fall time for the tests
+float riseStepSize     = 0.5;                             //rise step size for the tests
+float fallStepSize     = 0.5;                             //fall step size for the tests
+float numberCycles     = 5.0;                             //number of tests cycles
 
-bool controlRunning = false;
-bool testRunning    = false;
-double startTime    = 0;
+bool controlRunning = false;                              //indicates if control is running
+bool testRunning    = false;                              //indicates if a test is running
+double startTime    = 0;                                  //stores the start time of control or test for data logging
 
-bool buttonPressed = false;
-double timeButtonPressed = 0;
+bool buttonPressed = false;                               //stores if any button is pressed
+double timeButtonPressed = 0;                             //stores the timestamp if any button is pressed for the first time
 
-struct controlData dataControl = {};
-struct testsData dataTests = {};
-struct statusData dataStatus = {};
-struct commandData dataCommand = {};
+struct controlData dataControl = {};                      //store all information of the control tab that can be updated
+struct testsData dataTests = {};                          //store all information of the tests tab that can be updated
+struct statusData dataStatus = {};                        //store all information of the status tab that can be updated
+struct commandData dataCommand = {};                      //store all information of the control tab that can be updated
 
+//used functions, describe in more detail at the end of the code
 void changeValue(bool increase, bool decrease, double step, float* value, float maxValue, float minValue);
 void checkButtonPressed();
 void printData();
 void printHeader();
 
+/**************************************************************************/
+/*!
+    @brief Compute task, used to update all values and button presses. 
+    (running on core 1)
+*/
+/**************************************************************************/
 void taskcompute_loop(void * parameter) {
-  bool MeasurementH2Sensor1Running = false;
-  bool MeasurementH2Sensor2Running = false;
-  uint8_t token = 0;
+  bool MeasurementH2Sensor1Running = false; //indicates if the H2 Sensor 1 measurement is on
+  bool MeasurementH2Sensor2Running = false; //indicates if the H2 Sensor 2 measurement is on
+  uint8_t token = 0;                        //round toke to not update specific value every round                      
 
   for( ;; ) {
-    checkButtonPressed();
+    checkButtonPressed(); //check if any button is pressed for the first time
 
+    //turn on data logging if control or test is running
     if (controlRunning || testRunning) {
       printData();
     }
 
+    //trun off the peltier driver an control or test running if an communication error occurred
     if (dataControl.eventCommunicationError) {
       display.resetControlRunning();
       display.resetTestRunning();
@@ -100,12 +117,13 @@ void taskcompute_loop(void * parameter) {
       peltierDriver.powerOff();
     }
     
-
+    //only update the buttons, values, events and infos for the active tab 
     if (display.getTab() == PRESSED_TAB::CONTROL) {
       xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
         dataControl.valueNominalResistance  = nominalResistance;
         dataControl.valueSetTemperature     = Setpoint;
 
+        //update the value only if it has the token
         if (token == 0) {
           dataControl.valueChipTemperature = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::TEMPERATURE);
           token = 1;
@@ -157,6 +175,7 @@ void taskcompute_loop(void * parameter) {
 
       changeValue(dataControl.buttonIncreaseNominalResistancePressed, dataControl.buttonDecreaseNominalResistancePressed, 0.1, &nominalResistance, 900, 1100);
 
+      //behaviour for start, stop and reset button pressed
       if (dataControl.buttonStartPressed && !dataTests.buttonStartTestPreviouslyPressed && !controlRunning && !dataControl.eventCommunicationError) {
         controlRunning = true;
         startTime = millis();
@@ -194,6 +213,7 @@ void taskcompute_loop(void * parameter) {
       changeValue(dataTests.buttonIncreaseFallStepSizePressed    , dataTests.buttonDecreaseFallStepSizePressed    , 0.1, &fallStepSize    , 0.5, (endTemperature-startTemperature));
       changeValue(dataTests.buttonIncreaseNumberCyclesPressed    , dataTests.buttonDecreaseNumberCyclesPressed    ,   1, &numberCycles    ,   1, 999999);
 
+      //behaviour for start, stop and reset button pressed
       if (dataTests.buttonStartTestPressed && !dataTests.buttonStartTestPreviouslyPressed && !testRunning) {
         testRunning = true;
         startTime = millis();
@@ -259,10 +279,17 @@ void taskcompute_loop(void * parameter) {
   vTaskDelete( NULL );
 }
 
+/**************************************************************************/
+/*!
+    @brief Display task, used to update the selected tab.
+    (running on core 1)
+*/
+/**************************************************************************/
 void taskdisplay_loop(void * parameter) {
   for( ;; ) {
     display.drawTabSelect();
 
+    //only draw the tab that is active
     if (display.getTab() == PRESSED_TAB::CONTROL) {
       xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
       dataControl = display.drawControlTab(dataControl);
@@ -284,17 +311,28 @@ void taskdisplay_loop(void * parameter) {
   vTaskDelete( NULL );
 }
 
+/**************************************************************************/
+/*!
+    @brief PIDy task, used to calculate the output value regarding 
+    the changing input and setpoint.
+    (running on core 1)
+*/
+/**************************************************************************/
 void taskpid_loop(void * parameter) {
   for( ;; ) {
+
+    //calculate the output value if control or task is running
     if (controlRunning || testRunning) {
       xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
         Input = pt1000.temperature(nominalResistance, refResistance);
         peltierPID.Compute();
       xSemaphoreGive(SemaphoreDataPID);
 
+      //check for a communication error
       bool error = false;
       error = peltierDriver.setVoltage(Output);
 
+      //mark error if communication with peltier driver or pt1000 it faulty
       if (error || pt1000.readFault()) {
         dataControl.eventCommunicationError = true;
       }
@@ -305,33 +343,44 @@ void taskpid_loop(void * parameter) {
   vTaskDelete( NULL );
 }
 
+/**************************************************************************/
+/*!
+    @brief Test task, used to update the selected tab.
+    (running on core 0 as it is time critical)
+*/
+/**************************************************************************/
 void tasktest_loop(void * parameter) {
-  uint16_t currentCycle         = 0;
-  double currentSetTemperature  = 0;
-  double increaseSetTemperature = 0;
-  double decreaseSetTemperature = 0;
-  double delayTimeRise          = 0;
-  double delayTimeFall          = 0;
-  double TimeRise               = 0;
-  double TimeFall               = 0;
-  double numberStepsRise        = 0;
-  double numberStepsFall        = 0;
-  double counterStepsRise       = 0;
-  double counterStepsFall       = 0;
-  double counterTotalSteps      = 0;
+  uint16_t currentCycle         = 0;  //stores the current test cycle (test round)
+  double currentSetTemperature  = 0;  //stores the current set temperature
+  double increaseSetTemperature = 0;  //stores the rise sep size
+  double decreaseSetTemperature = 0;  //stores the fall set size
+  double delayTimeRise          = 0;  //store the rise delay time
+  double delayTimeFall          = 0;  //Stores the fall delay time
+  double TimeRise               = 0;  //stores the complete rise time for one cycle
+  double TimeFall               = 0;  //stores the complete fall time for one cycle
+  double numberStepsRise        = 0;  //stores the number of rise steps
+  double numberStepsFall        = 0;  //stores the number of fall steps
+  double counterStepsRise       = 0;  //counts the completed rise steps
+  double counterStepsFall       = 0;  //counts the completed fall steps
+  double counterTotalSteps      = 0;  //counts the total number of steps
 
-  bool testRunningFirst = true;
+  bool testRunningFirst = true;       //indicates if the start test button is pressed for the first time
 
-  TickType_t xLastWakeTime;
-  TickType_t xDelayTime = pdMS_TO_TICKS(500);
+  TickType_t xLastWakeTime;                   //last wake up time of the task
+  TickType_t xDelayTime = pdMS_TO_TICKS(500); //delay time of the task
 
-  xLastWakeTime = xTaskGetTickCount();
+  xLastWakeTime = xTaskGetTickCount();        //get the current wakeup time
 
   for( ;; ) {
-    vTaskDelayUntil(&xLastWakeTime, xDelayTime);
+    vTaskDelayUntil(&xLastWakeTime, xDelayTime);  //delay the task regarding its last wake up dime and total delay time
 
+    //execute if test is running
     if (testRunning) {
+
+      //execute if test is started for the first time
       if (testRunningFirst) {
+
+        //set all needed variables
         currentCycle           = 1;
         currentSetTemperature  = startTemperature;
         increaseSetTemperature = riseStepSize;
@@ -347,8 +396,11 @@ void tasktest_loop(void * parameter) {
         counterTotalSteps      = 0;
 
         Setpoint         = currentSetTemperature;
+
+        //mark the test as already running
         testRunningFirst = false;
 
+        //check for an correct data input
         if(endTemperature < startTemperature) {
           testRunning = false;
           peltierDriver.powerOff();
@@ -367,21 +419,24 @@ void tasktest_loop(void * parameter) {
           display.resetTestRunning();
         }
 
+        //delay task for 20s to reach the setpoint
         xDelayTime = pdMS_TO_TICKS(20000);
       } else {
-        if (counterStepsRise < numberStepsRise) {
+        if (counterStepsRise < numberStepsRise) {         //execute for rising setpoint
           counterStepsRise++;
           xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
           Setpoint += increaseSetTemperature;
           xSemaphoreGive(SemaphoreDataPID);
           xDelayTime = pdMS_TO_TICKS(delayTimeRise);
-        } else if (counterStepsFall < numberStepsFall) {
+        } else if (counterStepsFall < numberStepsFall) {  //execute for falling setpoint
           counterStepsFall++;
           xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
           Setpoint -= decreaseSetTemperature;
           xSemaphoreGive(SemaphoreDataPID);
           xDelayTime = pdMS_TO_TICKS(delayTimeRise);
-        } else {
+        } else {                                          //execute is all rising steps and falling step are done
+          
+          //check if test is finished (all test cycles executed)
           if (currentCycle == numberCycles-1) {
             testRunning = false;
             peltierDriver.powerOff();
@@ -391,6 +446,7 @@ void tasktest_loop(void * parameter) {
             xSemaphoreGive(SemaphoreDataPID);
             display.resetTestRunning();
           }
+
           currentCycle += 1;
           counterStepsRise = 0;
           counterStepsFall = 0;
@@ -424,12 +480,19 @@ void tasktest_loop(void * parameter) {
   vTaskDelete( NULL );
 }
 
+/**************************************************************************/
+/*!
+    @brief Setup: initialising the serial port, tft display, pt1000, 
+    peltier driver and starting all tasks.
+    (running on core 1)
+*/
+/**************************************************************************/
 void setup() {
   Serial.begin(115200);
   delay(2000);
 
-  display.begin();
-  display.drawTabSelect(true);
+  display.begin();                                                      //initialize the tft display
+  display.drawTabSelect(true);                                          //draw the tab for the fist time
 
   pt1000.begin(MAX31865_2WIRE);                                         //initialize pt1000 in 2 wire mode
   
@@ -440,6 +503,7 @@ void setup() {
   peltierPID.SetControllerDirection(peltierPID.Action::reverse);        //set PID to reverse mode
   peltierPID.SetMode(peltierPID.Control::automatic);                    //turn the PID on
 
+  //semaphores to make the data exchange between the tasks possible
   SemaphoreDataControl = xSemaphoreCreateMutex();
   SemaphoreDataTests   = xSemaphoreCreateMutex();
   SemaphoreDataStatus  = xSemaphoreCreateMutex();
@@ -483,9 +547,26 @@ void setup() {
     0);
 }
 
+/**************************************************************************/
+/*!
+    @brief Loop: nothing to do as different tasks are used.
+    (running on core 1)
+*/
+/**************************************************************************/
 void loop() { 
 }
 
+/**************************************************************************/
+/*!
+    @brief Change a specified value with a button press.
+    @param increase true if the increase button is pressed
+    @param decrease true if the decrease button is pressed
+    @param step stepsize for increase of decrease
+    @param value value to be changed
+    @param minValue minimal possible value
+    @param maxValue maximal possible value
+*/
+/**************************************************************************/
 void changeValue(bool increase, bool decrease, double step, float* value, float minValue, float maxValue) {
   if (buttonPressed) {
     if (increase) {
@@ -518,6 +599,12 @@ void changeValue(bool increase, bool decrease, double step, float* value, float 
   }
 }
 
+/**************************************************************************/
+/*!
+    @brief Check if any button is pressed for the first time and store the 
+    time stamp.
+*/
+/**************************************************************************/
 void checkButtonPressed() {
   if (!dataControl.buttonIncreaseSetTemperaturePressed && !dataControl.buttonDecreaseSetTemperaturePressed && !dataControl.buttonIncreaseNominalResistancePressed && !dataControl.buttonDecreaseNominalResistancePressed && !dataTests.buttonIncreaseStartTemperaturePressed && !dataTests.buttonDecreaseStartTemperaturePressed && !dataTests.buttonIncreaseEndTemperaturePressed && !dataTests.buttonDecreaseEndTemperaturePressed && !dataTests.buttonIncreaseRiseTimePressed && !dataTests.buttonDecreaseRiseTimePressed && !dataTests.buttonIncreaseFallTimePressed && !dataTests.buttonDecreaseFallTimePressed && !dataTests.buttonIncreaseRiseStepSizePressed && !dataTests.buttonDecreaseRiseStepSizePressed && !dataTests.buttonIncreaseFallStepSizePressed && !dataTests.buttonDecreaseFallStepSizePressed && !dataTests.buttonIncreaseNumberCyclesPressed && !dataTests.buttonDecreaseNumberCyclesPressed) {
     buttonPressed = false;
@@ -529,6 +616,11 @@ void checkButtonPressed() {
   }
 }
 
+/**************************************************************************/
+/*!
+    @brief Print all important data for data logging.
+*/
+/**************************************************************************/
 void printData() {
   double currentTime = millis();
   currentTime /= 1000;
@@ -542,6 +634,11 @@ void printData() {
   Serial.print(dataControl.valueMeasureH2Sensor2, 4); Serial.println(", ");
 }
 
+/**************************************************************************/
+/*!
+    @brief Print the header for data logging
+*/
+/**************************************************************************/
 void printHeader() {
   Serial.print("Time (sec), ");
   Serial.print("Control Running, ");
