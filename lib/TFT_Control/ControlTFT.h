@@ -123,7 +123,7 @@ struct controlData {
     double valueMeasureH2Sensor1;
     double valueMeasureH2Sensor2;
     double valueNominalResistance;
-    double valueSetTemperature;
+    double valueSetValue;
     double valueCurrentTemperature;
     bool   buttonMeasureH2Sensor1StopPressed;
     bool   buttonMeasureH2Sensor1StartPressed;
@@ -131,9 +131,12 @@ struct controlData {
     bool   buttonMeasureH2Sensor2StartPressed;
     bool   buttonDecreaseNominalResistancePressed;
     bool   buttonIncreaseNominalResistancePressed;
-    bool   buttonDecreaseSetTemperaturePressed;
-    bool   buttonIncreaseSetTemperaturePressed;
+    bool   buttonDecreaseSetValuePressed;
+    bool   buttonIncreaseSetValuePressed;
     bool   eventCommunicationError;
+    bool   buttonVoltageControlPressed;
+    bool   buttonVoltageControlPreviouslyPressed;
+    bool   buttonVoltageControl;
     bool   buttonResetPressed;
     bool   buttonStopPressed;
     bool   buttonStartPressed;
@@ -142,18 +145,18 @@ struct controlData {
 
 //store all information of the tests tab that can be updated
 struct testsData {
-    double  valueStartTemperature;
-    double  valueEndTemperature;
+    double  valueStartValue;
+    double  valueEndValue;
     double  valueRiseTime;
     double  valueFallTime;
     double  valueRiseStepSize;
     double  valueFallStepSize;
     double  valueNumberCycles;
     double  valueProgress;
-    bool    buttonDecreaseStartTemperaturePressed;
-    bool    buttonIncreaseStartTemperaturePressed;
-    bool    buttonDecreaseEndTemperaturePressed;
-    bool    buttonIncreaseEndTemperaturePressed;
+    bool    buttonDecreaseStartValuePressed;
+    bool    buttonIncreaseStartValuePressed;
+    bool    buttonDecreaseEndValuePressed;
+    bool    buttonIncreaseEndValuePressed;
     bool    buttonDecreaseRiseTimePressed;
     bool    buttonIncreaseRiseTimePressed;
     bool    buttonDecreaseFallTimePressed;
@@ -408,6 +411,10 @@ private:
     bool _controlRunning;               //status to indicate if control is running
     bool _measurementH2Sensor1Running;  //status to indicate if H2 Sensor 1 is used
     bool _measurementH2Sensor2Running;  //status to indicate if H2 Sensor 2 is used
+    bool _voltageControlActive;         //status to indicate if the temperature of voltage can be controlled
+
+    bool _redrawStartButton;
+    bool _redrawStartTestButton;
 
     //tab struct for the different tabs
     struct tab _controlTab;
@@ -422,7 +429,7 @@ private:
     struct text _textMeasureH2Sensor1;
     struct text _textMeasureH2Sensor2;
     struct text _textNominalResistance;
-    struct text _textSetTemperature;
+    struct text _textSetValue;
     struct text _textCurrentTemperature;
     struct text _textOutput;
 
@@ -433,8 +440,9 @@ private:
     struct button _buttonMeasureH2Sensor2Start;
     struct button _buttonDecreaseNominalResistance;
     struct button _buttonIncreaseNominalResistance;
-    struct button _buttonDecreaseSetTemperature;
-    struct button _buttonIncreaseSetTemperature;
+    struct button _buttonDecreaseSetValue;
+    struct button _buttonIncreaseSetValue;
+    struct button _buttonVoltageControl;
     struct button _buttonReset;
     struct button _buttonStop;
     struct button _buttonStart; 
@@ -446,15 +454,15 @@ private:
     struct value _valueMeasureH2Sensor1;
     struct value _valueMeasureH2Sensor2;
     struct value _valueNominalResistance;
-    struct value _valueSetTemperature;
+    struct value _valueSetValue;
     struct value _valueCurrentTemperature;
     
     //event for control tab
     struct event _eventCommunicationError;
 
     //texts for tests tab
-    struct text _textStartTemperature;
-    struct text _textEndTemperature;
+    struct text _textStartValue;
+    struct text _textEndValue;
     struct text _textRiseTime;
     struct text _textFallTime;
     struct text _textRiseStepSize;
@@ -464,10 +472,10 @@ private:
     struct text _textTest;
 
     //buttons for tests tab
-    struct button _buttonDecreaseStartTemperature;
-    struct button _buttonIncreaseStartTemperature;
-    struct button _buttonDecreaseEndTemperature;
-    struct button _buttonIncreaseEndTemperature;
+    struct button _buttonDecreaseStartValue;
+    struct button _buttonIncreaseStartValue;
+    struct button _buttonDecreaseEndValue;
+    struct button _buttonIncreaseEndValue;
     struct button _buttonDecreaseRiseTime;
     struct button _buttonIncreaseRiseTime;
     struct button _buttonDecreaseFallTime;
@@ -483,8 +491,8 @@ private:
     struct button _buttonStartTest;
 
     //values for tests tab
-    struct value _valueStartTemperature;
-    struct value _valueEndTemperature;
+    struct value _valueStartValue;
+    struct value _valueEndValue;
     struct value _valueRiseTime;
     struct value _valueFallTime;
     struct value _valueRiseStepSize;

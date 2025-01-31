@@ -65,22 +65,23 @@ void ControlTFT::begin(){
   _textMeasureH2Sensor1   = {"H2 Sensor 1:",   26, 120, 160, 27, BLACK, TFT_WHITE};
   _textMeasureH2Sensor2   = {"H2 Sensor 2:",   26, 147, 160, 27, BLACK, TFT_WHITE};
   _textNominalResistance  = {"R_0:",           26, 180, 150, 27, BLACK, TFT_WHITE};
-  _textSetTemperature     = {"Temp. Set:",     26, 213, 150, 27, BLACK, TFT_WHITE};
+  _textSetValue           = {"Temp. Set:",     26, 213, 150, 27, BLACK, TFT_WHITE};
   _textCurrentTemperature = {"Temp. Current:", 26, 240, 170, 27, BLACK, TFT_WHITE};
   _textOutput             = {"Output:",        26, 273,  80, 27, BLACK, TFT_WHITE};
 
   //buttons for control tab
-  _buttonMeasureH2Sensor1Stop      = {"Stop",    311, 123, 70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonMeasureH2Sensor1Start     = {"Start",   387, 123, 70,  21, 10, BLACK, LIGHT_GREY, BLUE, false, false};
-  _buttonMeasureH2Sensor2Stop      = {"Stop",    311, 150, 70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonMeasureH2Sensor2Start     = {"Start",   387, 150, 70,  21, 10, BLACK, LIGHT_GREY, BLUE, false, false};
-  _buttonIncreaseNominalResistance = {"Up",      387, 183, 70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonDecreaseNominalResistance = {"Down",    311, 183, 70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonDecreaseSetTemperature    = {"Down",    311, 216, 70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonIncreaseSetTemperature    = {"Up",      387, 216, 70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonReset                     = {"Reset",   235, 276, 70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonStop                      = {"Stop",    311, 276, 70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonStart                     = {"Start",   387, 276, 70,  21, 10, BLACK, LIGHT_GREY, BLUE, false, false};
+  _buttonMeasureH2Sensor1Stop      = {"Stop",    311, 123,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonMeasureH2Sensor1Start     = {"Start",   387, 123,  70,  21, 10, BLACK, LIGHT_GREY, BLUE, false, false};
+  _buttonMeasureH2Sensor2Stop      = {"Stop",    311, 150,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonMeasureH2Sensor2Start     = {"Start",   387, 150,  70,  21, 10, BLACK, LIGHT_GREY, BLUE, false, false};
+  _buttonIncreaseNominalResistance = {"Up",      387, 183,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonDecreaseNominalResistance = {"Down",    311, 183,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonDecreaseSetValue          = {"Down",    311, 216,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonIncreaseSetValue          = {"Up",      387, 216,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonVoltageControl            = {"Temp.",   311, 243, 146,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonReset                     = {"Reset",   235, 276,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonStop                      = {"Stop",    311, 276,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonStart                     = {"Start",   387, 276,  70,  21, 10, BLACK, LIGHT_GREY, BLUE, false, false};
 
   //values for control tab
   _valueChipTemperature    = {0.0,  20,  87, 142, 27, BLACK, TFT_WHITE};
@@ -89,54 +90,54 @@ void ControlTFT::begin(){
   _valueMeasureH2Sensor1   = {0.0, 190, 120, 100, 27, BLACK, TFT_WHITE};
   _valueMeasureH2Sensor2   = {0.0, 190, 147, 100, 27, BLACK, TFT_WHITE};
   _valueNominalResistance  = {0.0, 190, 180, 100, 27, BLACK, TFT_WHITE};
-  _valueSetTemperature     = {0.0, 190, 213, 100, 27, BLACK, TFT_WHITE};
+  _valueSetValue           = {0.0, 190, 213, 100, 27, BLACK, TFT_WHITE};
   _valueCurrentTemperature = {0.0, 190, 240, 100, 27, BLACK, TFT_WHITE};
 
   //event for control tab
-  _eventCommunicationError   = {0, "-", "ERROR",  159, 276, 70, 21, BLACK, RED, GREEN};
+  _eventCommunicationError = {0, "-", "ERROR",  159, 276, 70, 21, BLACK, RED, GREEN};
 
   //texts for tests tab
-  _textStartTemperature = {"Start Temp.:",    26,   60, 150, 26, BLACK, TFT_WHITE};
-  _textEndTemperature   = {"End Temp.:",      26,   86, 140, 26, BLACK, TFT_WHITE};
-  _textRiseTime         = {"Rise Time:",      26,  112, 140, 26, BLACK, TFT_WHITE};
-  _textFallTime         = {"Fall Time:",      26,  138, 140, 26, BLACK, TFT_WHITE};
-  _textRiseStepSize     = {"Rise Step Size:", 26,  164, 200, 26, BLACK, TFT_WHITE};
-  _textFallStepSize     = {"Fall Step Size:", 26,  190, 200, 26, BLACK, TFT_WHITE};
-  _textNumberCycles     = {"Numb. Cycles:",   26,  216, 150, 26, BLACK, TFT_WHITE};
-  _textInformation      = {"Information:",    26,  245, 150, 26, BLACK, TFT_WHITE};
-  _textTest             = {"Progress:",       26,  274, 110, 26, BLACK, TFT_WHITE};
+  _textStartValue   = {"Start Temp.:",    26,   60, 170, 26, BLACK, TFT_WHITE};
+  _textEndValue     = {"End Temp.:",      26,   86, 160, 26, BLACK, TFT_WHITE};
+  _textRiseTime     = {"Rise Time:",      26,  112, 140, 26, BLACK, TFT_WHITE};
+  _textFallTime     = {"Fall Time:",      26,  138, 140, 26, BLACK, TFT_WHITE};
+  _textRiseStepSize = {"Rise Step Size:", 26,  164, 200, 26, BLACK, TFT_WHITE};
+  _textFallStepSize = {"Fall Step Size:", 26,  190, 200, 26, BLACK, TFT_WHITE};
+  _textNumberCycles = {"Numb. Cycles:",   26,  216, 150, 26, BLACK, TFT_WHITE};
+  _textInformation  = {"Information:",    26,  245, 150, 26, BLACK, TFT_WHITE};
+  _textTest         = {"Progress:",       26,  274, 110, 26, BLACK, TFT_WHITE};
 
   //buttons for tests tab
-  _buttonDecreaseStartTemperature = {"Down",  311,  62, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonIncreaseStartTemperature = {"Up",    387,  62, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonDecreaseEndTemperature   = {"Down",  311,  88, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonIncreaseEndTemperature   = {"Up",    387,  88, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonDecreaseRiseTime         = {"Down",  311, 114, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonIncreaseRiseTime         = {"Up",    387, 114, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonDecreaseFallTime         = {"Down",  311, 140, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonIncreaseFallTime         = {"Up",    387, 140, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonDecreaseRiseStepSize     = {"Down",  311, 166, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonIncreaseRiseStepSize     = {"Up",    387, 166, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonDecreaseFallStepSize     = {"Down",  311, 192, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonIncreaseFallStepSize     = {"Up",    387, 192, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonDecreaseNumberCycles     = {"Down",  311, 218, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonIncreaseNumberCycles     = {"Up",    387, 218, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonResetTest                = {"Reset", 235, 276, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonStopTest                 = {"Stop",  311, 276, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
-  _buttonStartTest                = {"Start", 387, 276, 70,  22, 10, BLACK, LIGHT_GREY, BLUE, false, false};
+  _buttonDecreaseStartValue   = {"Down",  311,  62, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonIncreaseStartValue   = {"Up",    387,  62, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonDecreaseEndValue     = {"Down",  311,  88, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonIncreaseEndValue     = {"Up",    387,  88, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonDecreaseRiseTime     = {"Down",  311, 114, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonIncreaseRiseTime     = {"Up",    387, 114, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonDecreaseFallTime     = {"Down",  311, 140, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonIncreaseFallTime     = {"Up",    387, 140, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonDecreaseRiseStepSize = {"Down",  311, 166, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonIncreaseRiseStepSize = {"Up",    387, 166, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonDecreaseFallStepSize = {"Down",  311, 192, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonIncreaseFallStepSize = {"Up",    387, 192, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonDecreaseNumberCycles = {"Down",  311, 218, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonIncreaseNumberCycles = {"Up",    387, 218, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonResetTest            = {"Reset", 235, 276, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonStopTest             = {"Stop",  311, 276, 70,  22, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonStartTest            = {"Start", 387, 276, 70,  22, 10, BLACK, LIGHT_GREY, BLUE, false, false};
   
   //values for tests tab
-  _valueStartTemperature = {0.0, 200,  60, 80, 26, BLACK, TFT_WHITE};
-  _valueEndTemperature   = {0.0, 200,  86, 80, 26, BLACK, TFT_WHITE};
-  _valueRiseTime         = {0.0, 200, 112, 80, 26, BLACK, TFT_WHITE};
-  _valueFallTime         = {0.0, 200, 138, 80, 26, BLACK, TFT_WHITE};
-  _valueRiseStepSize     = {0.0, 200, 164, 80, 26, BLACK, TFT_WHITE};
-  _valueFallStepSize     = {0.0, 200, 190, 80, 26, BLACK, TFT_WHITE};
-  _valueNumberCycles     = {0.0, 200, 216, 80, 26, BLACK, TFT_WHITE};
-  _valueProgress         = {0.0, 140, 274, 80, 26, BLACK, TFT_WHITE};
+  _valueStartValue   = {0.0, 200,  60, 80, 26, BLACK, TFT_WHITE};
+  _valueEndValue     = {0.0, 200,  86, 80, 26, BLACK, TFT_WHITE};
+  _valueRiseTime     = {0.0, 200, 112, 80, 26, BLACK, TFT_WHITE};
+  _valueFallTime     = {0.0, 200, 138, 80, 26, BLACK, TFT_WHITE};
+  _valueRiseStepSize = {0.0, 200, 164, 80, 26, BLACK, TFT_WHITE};
+  _valueFallStepSize = {0.0, 200, 190, 80, 26, BLACK, TFT_WHITE};
+  _valueNumberCycles = {0.0, 200, 216, 80, 26, BLACK, TFT_WHITE};
+  _valueProgress     = {0.0, 140, 274, 80, 26, BLACK, TFT_WHITE};
 
   //infos for tests tab
-  _infoInformation = {0x0, 170, 245, 290, 26, BLACK, TFT_WHITE, "Ready", "Running ...", "Step Wait Time to Short!", "Invalid Input"};
+  _infoInformation = {0x0, 170, 245, 290, 26, BLACK, TFT_WHITE, "Ready", "Running ...", "Step Wait Time to Short", "Invalid Input", "Communication ERROR"};
 
   //texts for status tab
   _textPWMSwitchingEvent      = {"PWM Switching:",      26, 60,  170, 30, BLACK, TFT_WHITE};
@@ -190,7 +191,7 @@ void ControlTFT::begin(){
 void ControlTFT::drawTabSelect(bool initial) {
   bool changedTab = checkTouchTabs();
 
-  if (changedTab || init) {
+  if (changedTab || initial) {
     _tabSelect.createSprite(480, 47);
     _tabSelect.fillRoundRect(0, 0, 480, 47, 15, LIGHT_GREY);
 
@@ -244,13 +245,14 @@ void ControlTFT::drawTabSelect(bool initial) {
       drawButton(_buttonDecreaseNominalResistance);
       drawButton(_buttonIncreaseNominalResistance);
 
-      drawText(_textSetTemperature, ML_DATUM);
-      drawValue(_valueSetTemperature, MC_DATUM);
-      drawButton(_buttonDecreaseSetTemperature);
-      drawButton(_buttonIncreaseSetTemperature);
+      drawText(_textSetValue, ML_DATUM);
+      drawValue(_valueSetValue, MC_DATUM);
+      drawButton(_buttonDecreaseSetValue);
+      drawButton(_buttonIncreaseSetValue);
 
       drawText(_textCurrentTemperature, ML_DATUM);
       drawValue(_valueCurrentTemperature, MC_DATUM);
+      drawButton(_buttonVoltageControl);
 
       drawText(_textOutput, ML_DATUM);
       drawEvent(_eventCommunicationError);
@@ -279,15 +281,15 @@ void ControlTFT::drawTabSelect(bool initial) {
       _background.deleteSprite();
 
       //draw texts, values, buttons, events and infos
-      drawText(_textStartTemperature, ML_DATUM);
-      drawValue(_valueStartTemperature, MC_DATUM);
-      drawButton(_buttonDecreaseStartTemperature);
-      drawButton(_buttonIncreaseStartTemperature);
+      drawText(_textStartValue, ML_DATUM);
+      drawValue(_valueStartValue, MC_DATUM);
+      drawButton(_buttonDecreaseStartValue);
+      drawButton(_buttonIncreaseStartValue);
 
-      drawText(_textEndTemperature, ML_DATUM);
-      drawValue(_valueEndTemperature, MC_DATUM);
-      drawButton(_buttonDecreaseEndTemperature);
-      drawButton(_buttonIncreaseEndTemperature);
+      drawText(_textEndValue, ML_DATUM);
+      drawValue(_valueEndValue, MC_DATUM);
+      drawButton(_buttonDecreaseEndValue);
+      drawButton(_buttonIncreaseEndValue);
 
       drawText(_textRiseTime, ML_DATUM);
       drawValue(_valueRiseTime, MC_DATUM);
@@ -420,7 +422,7 @@ controlData ControlTFT::drawControlTab(controlData data) {
   _valueMeasureH2Sensor1.value   = data.valueMeasureH2Sensor1;
   _valueMeasureH2Sensor2.value   = data.valueMeasureH2Sensor2;
   _valueNominalResistance.value  = data.valueNominalResistance;
-  _valueSetTemperature.value     = data.valueSetTemperature;
+  _valueSetValue.value           = data.valueSetValue;
   _valueCurrentTemperature.value = data.valueCurrentTemperature;
 
   //draw values
@@ -430,7 +432,7 @@ controlData ControlTFT::drawControlTab(controlData data) {
   drawValue(_valueMeasureH2Sensor1, MC_DATUM);
   drawValue(_valueMeasureH2Sensor2, MC_DATUM);
   drawValue(_valueNominalResistance, MC_DATUM);
-  drawValue(_valueSetTemperature, MC_DATUM);
+  drawValue(_valueSetValue, MC_DATUM);
   drawValue(_valueCurrentTemperature, MC_DATUM);
 
   //update event
@@ -464,11 +466,45 @@ controlData ControlTFT::drawControlTab(controlData data) {
     _buttonIncreaseNominalResistance = buttonPressed(_buttonIncreaseNominalResistance, t_x, t_y, pressed);
     data.buttonIncreaseNominalResistancePressed = _buttonIncreaseNominalResistance.pressed;
 
-    _buttonDecreaseSetTemperature = buttonPressed(_buttonDecreaseSetTemperature, t_x, t_y, pressed);
-    data.buttonDecreaseSetTemperaturePressed = _buttonDecreaseSetTemperature.pressed;
+    _buttonDecreaseSetValue = buttonPressed(_buttonDecreaseSetValue, t_x, t_y, pressed);
+    data.buttonDecreaseSetValuePressed = _buttonDecreaseSetValue.pressed;
 
-    _buttonIncreaseSetTemperature = buttonPressed(_buttonIncreaseSetTemperature, t_x, t_y, pressed);
-    data.buttonIncreaseSetTemperaturePressed = _buttonIncreaseSetTemperature.pressed;
+    _buttonIncreaseSetValue = buttonPressed(_buttonIncreaseSetValue, t_x, t_y, pressed);
+    data.buttonIncreaseSetValuePressed = _buttonIncreaseSetValue.pressed;
+
+    _buttonVoltageControl = buttonPressed(_buttonVoltageControl, t_x, t_y, pressed);
+    data.buttonVoltageControlPreviouslyPressed = data.buttonVoltageControlPressed;
+    data.buttonVoltageControlPressed = _buttonVoltageControl.pressed;
+
+    if (_buttonVoltageControl.pressed && !_buttonVoltageControl.previouslyPressed) {
+      if (_buttonVoltageControl.pressed && _voltageControlActive) {
+        _voltageControlActive = false;
+        _buttonVoltageControl.name = "Temp.";
+        _textSetValue.name = "Temp. Set:";
+        _textStartValue.name = "Start Temp.:";
+        _textEndValue.name = "End Temp.:";
+        _textRiseTime.name = "Rise Time:";
+        _textFallTime.name = "Fall Time:";
+        _textRiseStepSize.name = "Rise Step Size:";
+        _textFallStepSize.name = "Fall Step Size:";
+
+        drawButton(_buttonVoltageControl);
+        drawText(_textSetValue, ML_DATUM);
+      } else if (_buttonVoltageControl.pressed && !_voltageControlActive) {
+        _voltageControlActive = true;
+        _buttonVoltageControl.name = "Voltage";
+        _textSetValue.name = "Voltage Set:";
+        _textStartValue.name = "Start Voltage:";
+        _textEndValue.name = "End Voltage:";
+        _textRiseTime.name = "Fall Time:";
+        _textFallTime.name = "Rise Time:";
+        _textRiseStepSize.name = "Fall Step Size:";
+        _textFallStepSize.name = "Rise Step Size:";
+
+        drawButton(_buttonVoltageControl);
+        drawText(_textSetValue, ML_DATUM);
+      }
+    }
 
     _buttonReset = buttonPressed(_buttonReset, t_x, t_y, pressed);
     data.buttonResetPressed = _buttonReset.pressed;
@@ -482,6 +518,11 @@ controlData ControlTFT::drawControlTab(controlData data) {
     data.buttonStartPreviouslyPressed = data.buttonStartPressed;
     data.buttonStartPressed = _buttonStart.pressed;
     lockButton(&_buttonStart, &_controlRunning);
+    if (_redrawStartButton){
+      drawButton(_buttonStart);
+      _redrawStartButton = false;
+    }
+    
   }  
 
   return data;
@@ -499,27 +540,27 @@ testsData ControlTFT::drawTestsTab(testsData data) {
   bool pressed = _tft.getTouch(&t_x, &t_y);  // Pressed will be set true is there is a valid touch on the screen
 
   //update values
-  _valueStartTemperature.value  = data.valueStartTemperature; 
-  _valueEndTemperature.value    = data.valueEndTemperature;   
-  _valueRiseTime.value          = data.valueRiseTime;
-  _valueFallTime.value          = data.valueFallTime;
-  _valueRiseStepSize.value      = data.valueRiseStepSize;
-  _valueFallStepSize.value      = data.valueFallStepSize;
-  _valueNumberCycles.value      = data.valueNumberCycles;
-  _valueProgress.value          = data.valueProgress;
+  _valueStartValue.value   = data.valueStartValue; 
+  _valueEndValue.value     = data.valueEndValue;   
+  _valueRiseTime.value     = data.valueRiseTime;
+  _valueFallTime.value     = data.valueFallTime;
+  _valueRiseStepSize.value = data.valueRiseStepSize;
+  _valueFallStepSize.value = data.valueFallStepSize;
+  _valueNumberCycles.value = data.valueNumberCycles;
+  _valueProgress.value     = data.valueProgress;
 
   //draw values
-  drawValue(_valueStartTemperature , MC_DATUM);
-  drawValue(_valueEndTemperature   , MC_DATUM);
-  drawValue(_valueRiseTime         , MC_DATUM);
-  drawValue(_valueFallTime         , MC_DATUM);
-  drawValue(_valueRiseStepSize     , MC_DATUM);
-  drawValue(_valueFallStepSize     , MC_DATUM);
-  drawValue(_valueNumberCycles     , MC_DATUM);
-  drawValue(_valueProgress         , MC_DATUM);
+  drawValue(_valueStartValue  , MC_DATUM);
+  drawValue(_valueEndValue    , MC_DATUM);
+  drawValue(_valueRiseTime    , MC_DATUM);
+  drawValue(_valueFallTime    , MC_DATUM);
+  drawValue(_valueRiseStepSize, MC_DATUM);
+  drawValue(_valueFallStepSize, MC_DATUM);
+  drawValue(_valueNumberCycles, MC_DATUM);
+  drawValue(_valueProgress    , MC_DATUM);
 
   //update info
-  _infoInformation.bits         = data.infoInformation;
+  _infoInformation.bits = data.infoInformation;
 
   //draw info
   drawInfo(_infoInformation);
@@ -529,17 +570,17 @@ testsData ControlTFT::drawTestsTab(testsData data) {
     
     //buttons can only be pressed if no test is running
     if (!_testRunning){
-      _buttonDecreaseStartTemperature = buttonPressed(_buttonDecreaseStartTemperature, t_x, t_y, pressed);
-      data.buttonDecreaseStartTemperaturePressed = _buttonDecreaseStartTemperature.pressed;
+      _buttonDecreaseStartValue = buttonPressed(_buttonDecreaseStartValue, t_x, t_y, pressed);
+      data.buttonDecreaseStartValuePressed = _buttonDecreaseStartValue.pressed;
 
-      _buttonIncreaseStartTemperature = buttonPressed(_buttonIncreaseStartTemperature, t_x, t_y, pressed);
-      data.buttonIncreaseStartTemperaturePressed = _buttonIncreaseStartTemperature.pressed;
+      _buttonIncreaseStartValue = buttonPressed(_buttonIncreaseStartValue, t_x, t_y, pressed);
+      data.buttonIncreaseStartValuePressed = _buttonIncreaseStartValue.pressed;
 
-      _buttonDecreaseEndTemperature = buttonPressed(_buttonDecreaseEndTemperature, t_x, t_y, pressed);
-      data.buttonDecreaseEndTemperaturePressed = _buttonDecreaseEndTemperature.pressed;
+      _buttonDecreaseEndValue = buttonPressed(_buttonDecreaseEndValue, t_x, t_y, pressed);
+      data.buttonDecreaseEndValuePressed = _buttonDecreaseEndValue.pressed;
 
-      _buttonIncreaseEndTemperature = buttonPressed(_buttonIncreaseEndTemperature, t_x, t_y, pressed);
-      data.buttonIncreaseEndTemperaturePressed = _buttonIncreaseEndTemperature.pressed;
+      _buttonIncreaseEndValue = buttonPressed(_buttonIncreaseEndValue, t_x, t_y, pressed);
+      data.buttonIncreaseEndValuePressed = _buttonIncreaseEndValue.pressed;
 
       _buttonDecreaseRiseTime = buttonPressed(_buttonDecreaseRiseTime, t_x, t_y, pressed);
       data.buttonDecreaseRiseTimePressed = _buttonDecreaseRiseTime.pressed;
@@ -584,6 +625,10 @@ testsData ControlTFT::drawTestsTab(testsData data) {
     data.buttonStartTestPreviouslyPressed = data.buttonStartTestPressed;
     data.buttonStartTestPressed = _buttonStartTest.pressed;
     lockButton(&_buttonStartTest, &_testRunning);
+    if (_redrawStartTestButton){
+      drawButton(_buttonStartTest);
+      _redrawStartTestButton = false;
+    }
   }
 
   return data;      
@@ -678,7 +723,7 @@ PRESSED_TAB ControlTFT::getTab() {
 void ControlTFT::resetControlRunning() {
   _controlRunning = false;                    //turn control running off
   _buttonStart.backgroundColor = LIGHT_GREY;  //reset the colour of the start button (blue to lightgrey)
-  _buttonStart.pressed = true;                //set start button pressed to true to redraw th button
+  _redrawStartButton = true;                  //set start button pressed to true to redraw th button
 }
 
 /**************************************************************************/
@@ -690,7 +735,7 @@ void ControlTFT::resetControlRunning() {
 void ControlTFT::resetTestRunning() {
   _testRunning = false;                           //turn test running off
   _buttonStartTest.backgroundColor = LIGHT_GREY;  //reset the colour of the start test button (blue to lightgrey)
-  _buttonStartTest.pressed = true;                //set start test button pressed to true to redraw th button
+  _redrawStartTestButton = true;                  //set start test button pressed to true to redraw the button
 }
 
 /**************************************************************************/
