@@ -21,6 +21,7 @@
  * Date: 2025-01-29 Author: Jan kleine Piening Comments: docs: added README
  * Date: 2025-01-31 Author: Jan kleine Piening Comments: func: added the functionality to control temperature and voltage
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: func: changed functions to improve touch responsiveness
+ * Date: 2025-02-03 Author: Jan kleine Piening Comments: (1.0.0) docs: added LICENSE and changed README.md
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
