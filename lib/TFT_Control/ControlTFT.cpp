@@ -472,37 +472,39 @@ controlData ControlTFT::drawControlTab(controlData data) {
     _buttonIncreaseSetValue = buttonPressed(_buttonIncreaseSetValue, t_x, t_y, pressed);
     data.buttonIncreaseSetValuePressed = _buttonIncreaseSetValue.pressed;
 
+    if (!_controlRunning) {
     _buttonVoltageControl = buttonPressed(_buttonVoltageControl, t_x, t_y, pressed);
     data.buttonVoltageControlPreviouslyPressed = data.buttonVoltageControlPressed;
     data.buttonVoltageControlPressed = _buttonVoltageControl.pressed;
 
-    if (_buttonVoltageControl.pressed && !_buttonVoltageControl.previouslyPressed) {
-      if (_buttonVoltageControl.pressed && _voltageControlActive) {
-        _voltageControlActive = false;
-        _buttonVoltageControl.name = "Temp.";
-        _textSetValue.name = "Temp. Set:";
-        _textStartValue.name = "Start Temp.:";
-        _textEndValue.name = "End Temp.:";
-        _textRiseTime.name = "Rise Time:";
-        _textFallTime.name = "Fall Time:";
-        _textRiseStepSize.name = "Rise Step Size:";
-        _textFallStepSize.name = "Fall Step Size:";
+      if (_buttonVoltageControl.pressed && !_buttonVoltageControl.previouslyPressed) {
+        if (_buttonVoltageControl.pressed && _voltageControlActive) {
+          _voltageControlActive = false;
+          _buttonVoltageControl.name = "Temp.";
+          _textSetValue.name = "Temp. Set:";
+          _textStartValue.name = "Start Temp.:";
+          _textEndValue.name = "End Temp.:";
+          _textRiseTime.name = "Rise Time:";
+          _textFallTime.name = "Fall Time:";
+          _textRiseStepSize.name = "Rise Step Size:";
+          _textFallStepSize.name = "Fall Step Size:";
 
-        drawButton(_buttonVoltageControl);
-        drawText(_textSetValue, ML_DATUM);
-      } else if (_buttonVoltageControl.pressed && !_voltageControlActive) {
-        _voltageControlActive = true;
-        _buttonVoltageControl.name = "Voltage";
-        _textSetValue.name = "Voltage Set:";
-        _textStartValue.name = "Start Voltage:";
-        _textEndValue.name = "End Voltage:";
-        _textRiseTime.name = "Fall Time:";
-        _textFallTime.name = "Rise Time:";
-        _textRiseStepSize.name = "Fall Step Size:";
-        _textFallStepSize.name = "Rise Step Size:";
+          drawButton(_buttonVoltageControl);
+          drawText(_textSetValue, ML_DATUM);
+        } else if (_buttonVoltageControl.pressed && !_voltageControlActive) {
+          _voltageControlActive = true;
+          _buttonVoltageControl.name = "Voltage";
+          _textSetValue.name = "Voltage Set:";
+          _textStartValue.name = "Start Voltage:";
+          _textEndValue.name = "End Voltage:";
+          _textRiseTime.name = "Fall Time:";
+          _textFallTime.name = "Rise Time:";
+          _textRiseStepSize.name = "Fall Step Size:";
+          _textFallStepSize.name = "Rise Step Size:";
 
-        drawButton(_buttonVoltageControl);
-        drawText(_textSetValue, ML_DATUM);
+          drawButton(_buttonVoltageControl);
+          drawText(_textSetValue, ML_DATUM);
+        }
       }
     }
 

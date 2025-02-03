@@ -20,6 +20,7 @@
  * Date: 2025-01-29 Author: Jan kleine Piening Comments: docs: improved comments
  * Date: 2025-01-29 Author: Jan kleine Piening Comments: docs: added README
  * Date: 2025-01-31 Author: Jan kleine Piening Comments: func: added the functionality to control temperature and voltage
+ * Date: 2025-02-03 Author: Jan kleine Piening Comments: func: changed functions to improve touch responsiveness
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -46,6 +47,7 @@ TaskHandle_t TaskCompute;
 TaskHandle_t TaskDisplay;
 TaskHandle_t TaskPID;
 TaskHandle_t TaskTest;
+TaskHandle_t TaskLogging;
 
 //semaphores to make the data transfer between the tasks possible
 SemaphoreHandle_t SemaphoreDataControl;
@@ -105,15 +107,22 @@ void printHeader();
 */
 /**************************************************************************/
 void taskcompute_loop(void * parameter) {
+  TickType_t xLastWakeTime;                   //last wake up time of the task
+  TickType_t xDelayTime = pdMS_TO_TICKS(100); //delay time of the task
+
+  xLastWakeTime = xTaskGetTickCount();        //get the current wakeup time
+
   bool MeasurementH2Sensor1Running = false; //indicates if the H2 Sensor 1 measurement is on
   bool MeasurementH2Sensor2Running = false; //indicates if the H2 Sensor 2 measurement is on
   uint8_t tokenControl = 0;                 //round token to not update specific value every round in control tab   
   uint8_t tokenGlobal  = 0;                 //round token to not update specific value every round while data logging                       
 
-  for( ;; ) {
-    checkButtonPressed(); //check if any button is pressed for the first time
+  while(true) {
+    vTaskDelayUntil(&xLastWakeTime, xDelayTime);  //delay the task regarding its last wake up dime and total delay time
 
-    //turn on data logging if control or test is running adn update needed values
+    checkButtonPressed();                         //check if any button is pressed for the first time
+
+    //turn on data logging if control or test is running and update needed values
     if (controlRunning || testRunning) {
 
       //read the RTD and calculate the current resistance
@@ -166,9 +175,6 @@ void taskcompute_loop(void * parameter) {
             dataControl.valueMeasureH2Sensor2 = 0.0;
           xSemaphoreGive(SemaphoreDataControl);
         }
-      
-      //print the measurement data
-      printData();
     }
 
     //trun off the peltier driver an control or test running if an communication error occurred
@@ -278,21 +284,8 @@ void taskcompute_loop(void * parameter) {
           fallStepSize = 0.5;
         }
         
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(10));
       }
-      
-      //change the set value on button press regarding the state of voltage control active
-      if (voltageControlActive) {
-        changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.1, &Output, -4, 4);
-      } else {
-        xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
-          changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.5, &Setpoint, -15, 100);
-        xSemaphoreGive(SemaphoreDataPID);
-      }
-
-      //change R0 on button press
-      changeValue(dataControl.buttonIncreaseNominalResistancePressed, dataControl.buttonDecreaseNominalResistancePressed, 0.1, &nominalResistance, 600, 1200);
-
 
       //update the H2 sensor 1 button state
       if(dataControl.buttonMeasureH2Sensor1StartPressed) {
@@ -307,6 +300,81 @@ void taskcompute_loop(void * parameter) {
       } else if (dataControl.buttonMeasureH2Sensor2StopPressed) {
         MeasurementH2Sensor2Running = false;
       }
+    } else if (display.getTab() == PRESSED_TAB::TESTS) {
+
+      //update test values
+      xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
+        dataTests.valueStartValue   = startValue;
+        dataTests.valueEndValue     = endValue;
+        dataTests.valueRiseTime     = riseTime;
+        dataTests.valueFallTime     = fallTime;
+        dataTests.valueRiseStepSize = riseStepSize;
+        dataTests.valueFallStepSize = fallStepSize;
+        dataTests.valueNumberCycles = numberCycles;
+      xSemaphoreGive(SemaphoreDataTests);
+    } else if (display.getTab() == PRESSED_TAB::STATUS) {
+      uint16_t status = peltierDriver.getStatus();
+
+      //update the status values
+      xSemaphoreTake(SemaphoreDataStatus, portMAX_DELAY);
+        dataStatus.eventPWMSwitchingEvent      = status & 1;
+        dataStatus.eventCurrentLimitEvent      = (status >> 1) & 1;
+        dataStatus.eventPowerLimitEvent        = (status >> 2) & 1;
+        dataStatus.eventSoftResetEvent         = (status >> 4) & 1;
+        dataStatus.eventOverCurrentEvent       = (status >> 5) & 1;
+        dataStatus.eventOverttemperatureEvent  = (status >> 6) & 1;
+        dataStatus.eventVCCUnderVoltageEvent   = (status >> 7) & 1;
+        dataStatus.eventVDDIOUnderVOltageEvent = (status >> 8) & 1;
+      xSemaphoreGive(SemaphoreDataStatus);
+    } else if (display.getTab() == PRESSED_TAB::COMMAND) {
+      uint32_t command = peltierDriver.getCommand();
+
+      //update the command values
+      xSemaphoreTake(SemaphoreDataCommand, portMAX_DELAY);
+        dataCommand.eventPowerStage         = command & 1;
+        dataCommand.eventPWMSwitching       = (command >> 1) & 1;
+        dataCommand.infoPWMFrequency        = (command >> 2) & 0b111;
+        dataCommand.infoPWMAdjust           = (command >> 5) & 0b11;
+        dataCommand.infoPWMDutyCycle        = (command >> 7) & 0b11;
+        dataCommand.eventLDORegulation      = (command >> 9) & 1;
+        dataCommand.infoPeakInductorCurrent = (command >> 11) & 0b111;
+        dataCommand.infoPowerLimit          = (command >> 15) & 0b11;
+      xSemaphoreGive(SemaphoreDataCommand);
+    }
+  }
+  vTaskDelete( NULL );
+}
+
+/**************************************************************************/
+/*!
+    @brief Display task, used to update the selected tab.
+    (running on core 1)
+*/
+/**************************************************************************/
+void taskdisplay_loop(void * parameter) {
+  TickType_t xLastWakeTime;                   //last wake up time of the task
+  TickType_t xDelayTime = pdMS_TO_TICKS(50); //delay time of the task
+
+  xLastWakeTime = xTaskGetTickCount();        //get the current wakeup time
+
+  while(true) {
+    vTaskDelayUntil(&xLastWakeTime, xDelayTime); //delay the task regarding its last wake up dime and total delay time
+
+    display.drawTabSelect();                      //redraw the tab background and tests if a new one is selected
+
+    //only draw the tab that is active
+    if (display.getTab() == PRESSED_TAB::CONTROL) {
+      //change the set value on button press regarding the state of voltage control active
+      if (voltageControlActive) {
+        changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.1, &Output, -4, 4);
+      } else {
+        xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
+          changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.5, &Setpoint, -15, 100);
+        xSemaphoreGive(SemaphoreDataPID);
+      }
+
+      //change R0 on button press
+      changeValue(dataControl.buttonIncreaseNominalResistancePressed, dataControl.buttonDecreaseNominalResistancePressed, 0.1, &nominalResistance, 600, 1200);
 
       //behaviour for start, stop and reset button pressed
       if (dataControl.buttonStartPressed && !dataTests.buttonStartTestPreviouslyPressed && !controlRunning && !dataControl.eventCommunicationError) {
@@ -330,18 +398,12 @@ void taskcompute_loop(void * parameter) {
           dataTests.infoInformation = 0;
         xSemaphoreGive(SemaphoreDataTests);
       }
-    } else if (display.getTab() == PRESSED_TAB::TESTS) {
-      //update test values
-      xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
-        dataTests.valueStartValue   = startValue;
-        dataTests.valueEndValue     = endValue;
-        dataTests.valueRiseTime     = riseTime;
-        dataTests.valueFallTime     = fallTime;
-        dataTests.valueRiseStepSize = riseStepSize;
-        dataTests.valueFallStepSize = fallStepSize;
-        dataTests.valueNumberCycles = numberCycles;
-      xSemaphoreGive(SemaphoreDataTests);
 
+      //draw the control tab and update button presses
+      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+      dataControl = display.drawControlTab(dataControl);
+      xSemaphoreGive(SemaphoreDataControl);
+    } else if (display.getTab() == PRESSED_TAB::TESTS) {
       //change test values on button press
       if (voltageControlActive) {
         changeValue(dataTests.buttonIncreaseStartValuePressed  , dataTests.buttonDecreaseStartValuePressed  , 0.1, &startValue  , endValue, 4);
@@ -413,63 +475,18 @@ void taskcompute_loop(void * parameter) {
           fallStepSize = 0.5;
         }
       }
-    } else if (display.getTab() == PRESSED_TAB::STATUS) {
-      uint16_t status = peltierDriver.getStatus();
 
-      //update the status values
-      xSemaphoreTake(SemaphoreDataStatus, portMAX_DELAY);
-        dataStatus.eventPWMSwitchingEvent      = status & 1;
-        dataStatus.eventCurrentLimitEvent      = (status >> 1) & 1;
-        dataStatus.eventPowerLimitEvent        = (status >> 2) & 1;
-        dataStatus.eventSoftResetEvent         = (status >> 4) & 1;
-        dataStatus.eventOverCurrentEvent       = (status >> 5) & 1;
-        dataStatus.eventOverttemperatureEvent  = (status >> 6) & 1;
-        dataStatus.eventVCCUnderVoltageEvent   = (status >> 7) & 1;
-        dataStatus.eventVDDIOUnderVOltageEvent = (status >> 8) & 1;
-      xSemaphoreGive(SemaphoreDataStatus);
-    } else if (display.getTab() == PRESSED_TAB::COMMAND) {
-      uint32_t command = peltierDriver.getCommand();
-
-      //update the command values
-      xSemaphoreTake(SemaphoreDataCommand, portMAX_DELAY);
-        dataCommand.eventPowerStage         = command & 1;
-        dataCommand.eventPWMSwitching       = (command >> 1) & 1;
-        dataCommand.infoPWMFrequency        = (command >> 2) & 0b111;
-        dataCommand.infoPWMAdjust           = (command >> 5) & 0b11;
-        dataCommand.infoPWMDutyCycle        = (command >> 7) & 0b11;
-        dataCommand.eventLDORegulation      = (command >> 9) & 1;
-        dataCommand.infoPeakInductorCurrent = (command >> 11) & 0b111;
-        dataCommand.infoPowerLimit          = (command >> 15) & 0b11;
-      xSemaphoreGive(SemaphoreDataCommand);
-    }
-  }
-  vTaskDelete( NULL );
-}
-
-/**************************************************************************/
-/*!
-    @brief Display task, used to update the selected tab.
-    (running on core 1)
-*/
-/**************************************************************************/
-void taskdisplay_loop(void * parameter) {
-  for( ;; ) {
-    display.drawTabSelect();
-
-    //only draw the tab that is active
-    if (display.getTab() == PRESSED_TAB::CONTROL) {
-      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-      dataControl = display.drawControlTab(dataControl);
-      xSemaphoreGive(SemaphoreDataControl);
-    } else if (display.getTab() == PRESSED_TAB::TESTS) {
+      //draw the tests tab and update button presses
       xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
       dataTests = display.drawTestsTab(dataTests);
       xSemaphoreGive(SemaphoreDataTests);
     } else if (display.getTab() == PRESSED_TAB::STATUS) {
+      //draw the status tab
       xSemaphoreTake(SemaphoreDataStatus, portMAX_DELAY);
       display.drawStatusTab(dataStatus);
       xSemaphoreGive(SemaphoreDataStatus);
     } else if (display.getTab() == PRESSED_TAB::COMMAND) {
+      //draw the command tab
       xSemaphoreTake(SemaphoreDataCommand, portMAX_DELAY);
       display.drawCommandTab(dataCommand);
       xSemaphoreGive(SemaphoreDataCommand);
@@ -486,7 +503,13 @@ void taskdisplay_loop(void * parameter) {
 */
 /**************************************************************************/
 void taskpid_loop(void * parameter) {
-  for( ;; ) {
+  TickType_t xLastWakeTime;                   //last wake up time of the task
+  TickType_t xDelayTime = pdMS_TO_TICKS(100); //delay time of the task
+
+  xLastWakeTime = xTaskGetTickCount();        //get the current wakeup time
+
+  while(true) {
+    vTaskDelayUntil(&xLastWakeTime, xDelayTime); //delay the task regarding its last wake up dime and total delay time
 
     //calculate the output value if control or task is running
     if (controlRunning || testRunning) {
@@ -510,8 +533,9 @@ void taskpid_loop(void * parameter) {
         dataControl.eventCommunicationError = true;
       }
 
+      xDelayTime = pdMS_TO_TICKS(100);
     } else {
-      vTaskDelay(pdMS_TO_TICKS(500));
+      xDelayTime = pdMS_TO_TICKS(500);
     }
   }
   vTaskDelete( NULL );
@@ -524,6 +548,11 @@ void taskpid_loop(void * parameter) {
 */
 /**************************************************************************/
 void tasktest_loop(void * parameter) {
+  TickType_t xLastWakeTime;                   //last wake up time of the task
+  TickType_t xDelayTime = pdMS_TO_TICKS(500); //delay time of the task
+
+  xLastWakeTime = xTaskGetTickCount();        //get the current wakeup time
+
   uint16_t currentCycle    = 0;  //stores the current test cycle (test round)
   double currentSetValue   = 0;  //stores the current set temperature
   double increaseSetValue  = 0;  //stores the rise sep size
@@ -539,13 +568,7 @@ void tasktest_loop(void * parameter) {
   double counterTotalSteps = 0;  //counts the total number of steps
 
   bool testRunningFirst = true;  //indicates if the start test button is pressed for the first time
-
-  TickType_t xLastWakeTime;                   //last wake up time of the task
-  TickType_t xDelayTime = pdMS_TO_TICKS(500); //delay time of the task
-
-  xLastWakeTime = xTaskGetTickCount();        //get the current wakeup time
-
-  for( ;; ) {
+  while(true) {
     vTaskDelayUntil(&xLastWakeTime, xDelayTime); //delay the task regarding its last wake up dime and total delay time
 
     //execute if test is running
@@ -698,6 +721,28 @@ void tasktest_loop(void * parameter) {
 
 /**************************************************************************/
 /*!
+    @brief Logging task, used to serial print the data to be logged.
+    (running on core 0 as it is time critical)
+*/
+/**************************************************************************/
+void tasklogging_loop(void * parameter) {
+  TickType_t xLastWakeTime;                   //last wake up time of the task
+  TickType_t xDelayTime = pdMS_TO_TICKS(250); //delay time of the task
+
+  xLastWakeTime = xTaskGetTickCount();        //get the current wakeup time
+  while(true) {
+    vTaskDelayUntil(&xLastWakeTime, xDelayTime); //delay the task regarding its last wake up dime and total delay time
+
+    //execute if test is running
+    if (controlRunning || testRunning) {
+      printData();  //print the measurement data
+    }
+  }
+  vTaskDelete( NULL );
+}
+
+/**************************************************************************/
+/*!
     @brief Setup: initialising the serial port, tft display, pt1000, 
     peltier driver and starting all tasks.
     (running on core 1)
@@ -731,7 +776,7 @@ void setup() {
     "TaskCompute",
     10000,
     NULL,
-    9,
+    3,
     &TaskCompute,
     1);
 
@@ -740,7 +785,7 @@ void setup() {
     "TaskDisplay",
     50000,
     NULL,
-    10,
+    4,
     &TaskDisplay,
     1);
 
@@ -755,11 +800,20 @@ void setup() {
 
   xTaskCreatePinnedToCore(
     tasktest_loop,
-    "Test",
+    "TaskTest",
     10000,
     NULL,
     50,
     &TaskTest,
+    0);
+
+  xTaskCreatePinnedToCore(
+    tasklogging_loop,
+    "TaskLogging",
+    10000,
+    NULL,
+    2,
+    &TaskLogging,
     0);
 }
 
@@ -986,6 +1040,4 @@ void printHeader() {
     Serial.print("Analog Current Output (A), ");
     Serial.println("Analog Chip Temperature (°C)");
   }
-
-  Serial.println("");
 }
