@@ -22,6 +22,7 @@
  * Date: 2025-01-31 Author: Jan kleine Piening Comments: func: added the functionality to control temperature and voltage
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: func: changed functions to improve touch responsiveness
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: (1.0.0) docs: added LICENSE and changed README.md
+ * Date: 2025-02-03 Author: Jan kleine Piening Comments: (1.1.0) func: added correct H2 sensor measurement
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -121,8 +122,6 @@ void taskcompute_loop(void * parameter) {
   while(true) {
     vTaskDelayUntil(&xLastWakeTime, xDelayTime);  //delay the task regarding its last wake up dime and total delay time
 
-    checkButtonPressed();                         //check if any button is pressed for the first time
-
     //turn on data logging if control or test is running and update needed values
     if (controlRunning || testRunning) {
 
@@ -152,11 +151,14 @@ void taskcompute_loop(void * parameter) {
         }
 
         //Measure H2 Sensor 1
-        if (MeasurementH2Sensor2Running) {
+        if (MeasurementH2Sensor1Running) {
           double voltage = analogRead(H2SENSOR1);
           voltage /= 1000;
+
+          double concentration = voltage / 0.6;
+          concentration = (concentration - 0.527) / 0.986;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor1 = voltage;
+            dataControl.valueMeasureH2Sensor1 = concentration;
           xSemaphoreGive(SemaphoreDataControl);
         } else {
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
@@ -168,8 +170,11 @@ void taskcompute_loop(void * parameter) {
         if (MeasurementH2Sensor2Running) {
           double voltage = analogRead(H2SENSOR2);
           voltage /= 1000;
+
+          double concentration = voltage / 0.6;
+          concentration = (concentration - 0.505) / 0.981;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor2 = voltage;
+            dataControl.valueMeasureH2Sensor2 = concentration;
           xSemaphoreGive(SemaphoreDataControl);
         } else {
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
@@ -242,8 +247,11 @@ void taskcompute_loop(void * parameter) {
         if (MeasurementH2Sensor2Running) {
           double voltage = analogRead(H2SENSOR1);
           voltage /= 1000;
+
+          double concentration = voltage / 0.6;
+          concentration = (concentration - 0.527) / 0.986;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor1 = voltage;
+            dataControl.valueMeasureH2Sensor1 = concentration;
           xSemaphoreGive(SemaphoreDataControl);
         } else {
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
@@ -255,8 +263,11 @@ void taskcompute_loop(void * parameter) {
         if (MeasurementH2Sensor2Running) {
           double voltage = analogRead(H2SENSOR2);
           voltage /= 1000;
+
+          double concentration = voltage / 0.6;
+          concentration = (concentration - 0.505) / 0.981;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor2 = voltage;
+            dataControl.valueMeasureH2Sensor2 = concentration;
           xSemaphoreGive(SemaphoreDataControl);
         } else {
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
@@ -354,12 +365,14 @@ void taskcompute_loop(void * parameter) {
 /**************************************************************************/
 void taskdisplay_loop(void * parameter) {
   TickType_t xLastWakeTime;                   //last wake up time of the task
-  TickType_t xDelayTime = pdMS_TO_TICKS(50); //delay time of the task
+  TickType_t xDelayTime = pdMS_TO_TICKS(50);  //delay time of the task
 
   xLastWakeTime = xTaskGetTickCount();        //get the current wakeup time
 
   while(true) {
-    vTaskDelayUntil(&xLastWakeTime, xDelayTime); //delay the task regarding its last wake up dime and total delay time
+    vTaskDelayUntil(&xLastWakeTime, xDelayTime);  //delay the task regarding its last wake up dime and total delay time
+
+    checkButtonPressed();                         //check if any button is pressed for the first time
 
     display.drawTabSelect();                      //redraw the tab background and tests if a new one is selected
 
