@@ -23,6 +23,7 @@
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: func: changed functions to improve touch responsiveness
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: (1.0.0) docs: added LICENSE and changed README.md
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: (1.1.0) func: added correct H2 sensor measurement
+ * Date: 2025-02-04 Author: Jan kleine Piening Comments: (1.2.0) func: added fan and H2 sensor control
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -38,8 +39,12 @@
 #include "LT8722.h"
 #include "ControlTFT.h"
 
-#define H2SENSOR1 15      //analog read pin of the first H2 sensor
-#define H2SENSOR2 16      //analog read pin of the second H2 sensor
+#define PINH2SENSOR1 15      //analog read pin of the first H2 sensor
+#define PINH2SENSOR2 16      //analog read pin of the second H2 sensor
+
+#define PINFANCONTROL 21        //output pin to turn on the fan
+#define PINH2SENSOR1CONTROL 47  //output pin to turn on the H2 sensor 1
+#define PINH2SENSOR2CONTROL 48  //output pin to turn on the H2 sensor 2
 
 #define RTD_A 2.283e-3    //alpha of the PT1000
 #define RTD_B -5.775e-7   //beta of the PT1000
@@ -152,10 +157,10 @@ void taskcompute_loop(void * parameter) {
 
         //Measure H2 Sensor 1
         if (MeasurementH2Sensor1Running) {
-          double voltage = analogRead(H2SENSOR1);
+          double voltage = analogRead(PINH2SENSOR1);
           voltage /= 1000;
 
-          double concentration = voltage / 0.6;
+          double concentration = voltage / 0.588;
           concentration = (concentration - 0.527) / 0.986;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
             dataControl.valueMeasureH2Sensor1 = concentration;
@@ -168,10 +173,10 @@ void taskcompute_loop(void * parameter) {
 
         //Measure H2 Sensor 2
         if (MeasurementH2Sensor2Running) {
-          double voltage = analogRead(H2SENSOR2);
+          double voltage = analogRead(PINH2SENSOR2);
           voltage /= 1000;
 
-          double concentration = voltage / 0.6;
+          double concentration = voltage / 0.59;
           concentration = (concentration - 0.505) / 0.981;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
             dataControl.valueMeasureH2Sensor2 = concentration;
@@ -193,6 +198,7 @@ void taskcompute_loop(void * parameter) {
         dataTests.infoInformation = 4;
       xSemaphoreGive(SemaphoreDataTests);
       peltierDriver.powerOff();
+      digitalWrite(PINFANCONTROL, LOW);
     }
     
     //only update the buttons, values, events and infos for the active tab 
@@ -244,11 +250,11 @@ void taskcompute_loop(void * parameter) {
         }
 
         //Measure H2 Sensor 1
-        if (MeasurementH2Sensor2Running) {
-          double voltage = analogRead(H2SENSOR1);
+        if (MeasurementH2Sensor1Running) {
+          double voltage = analogRead(PINH2SENSOR1);
           voltage /= 1000;
 
-          double concentration = voltage / 0.6;
+          double concentration = voltage / 0.585;
           concentration = (concentration - 0.527) / 0.986;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
             dataControl.valueMeasureH2Sensor1 = concentration;
@@ -261,10 +267,10 @@ void taskcompute_loop(void * parameter) {
 
         //Measure H2 Sensor 1
         if (MeasurementH2Sensor2Running) {
-          double voltage = analogRead(H2SENSOR2);
+          double voltage = analogRead(PINH2SENSOR2);
           voltage /= 1000;
 
-          double concentration = voltage / 0.6;
+          double concentration = voltage / 0.59;
           concentration = (concentration - 0.505) / 0.981;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
             dataControl.valueMeasureH2Sensor2 = concentration;
@@ -301,15 +307,21 @@ void taskcompute_loop(void * parameter) {
 
       //update the H2 sensor 1 button state
       if(dataControl.buttonMeasureH2Sensor1StartPressed) {
+        digitalWrite(PINH2SENSOR1CONTROL, HIGH);
+        vTaskDelay(pdMS_TO_TICKS(2000));                          //delay 2s to wait for response time
         MeasurementH2Sensor1Running = true;
       } else if (dataControl.buttonMeasureH2Sensor1StopPressed) {
+        digitalWrite(PINH2SENSOR1CONTROL, LOW);
         MeasurementH2Sensor1Running = false;
       }
 
       //update the H2 sensor 2 button state
       if(dataControl.buttonMeasureH2Sensor2StartPressed) {
+        digitalWrite(PINH2SENSOR2CONTROL, HIGH);
+        vTaskDelay(pdMS_TO_TICKS(2000));                          //delay 2s to wait for response time
         MeasurementH2Sensor2Running = true;
       } else if (dataControl.buttonMeasureH2Sensor2StopPressed) {
+        digitalWrite(PINH2SENSOR2CONTROL, LOW);
         MeasurementH2Sensor2Running = false;
       }
     } else if (display.getTab() == PRESSED_TAB::TESTS) {
@@ -395,6 +407,7 @@ void taskdisplay_loop(void * parameter) {
         controlRunning = true;
         startTime = millis();
         startTime /= 1000;
+        digitalWrite(PINFANCONTROL, HIGH);
         peltierDriver.softStart();                                            //softstart of the LT8722 (resets all registers)
         peltierDriver.setPositiveVoltageLimit(VOLTAGE_LIMIT::LIMIT_5_00);     //set the positive voltage limit to 5V
         peltierDriver.setNegativeVoltageLimit(VOLTAGE_LIMIT::LIMIT_5_00);     //set the negative voltage limit to -5V
@@ -404,9 +417,11 @@ void taskdisplay_loop(void * parameter) {
       } else if (dataControl.buttonStopPressed) {
         controlRunning = false;
         peltierDriver.powerOff();
+        digitalWrite(PINFANCONTROL, LOW);
       } else if (dataControl.buttonResetPressed) {
         controlRunning = false;
         peltierDriver.reset();
+        digitalWrite(PINFANCONTROL, LOW);
         dataControl.eventCommunicationError = false;
         xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
           dataTests.infoInformation = 0;
@@ -442,6 +457,7 @@ void taskdisplay_loop(void * parameter) {
         testRunning = true;
         startTime = millis();
         startTime /= 1000;
+        digitalWrite(PINFANCONTROL, HIGH);
         peltierDriver.softStart();                                            //softstart of the LT8722 (resets all registers)
         peltierDriver.setPositiveVoltageLimit(VOLTAGE_LIMIT::LIMIT_5_00);     //set the positive voltage limit to 5V
         peltierDriver.setNegativeVoltageLimit(VOLTAGE_LIMIT::LIMIT_5_00);     //set the negative voltage limit to -5V
@@ -454,6 +470,7 @@ void taskdisplay_loop(void * parameter) {
       } else if (dataTests.buttonStopTestPressed) {
         testRunning = false;
         peltierDriver.powerOff();                                             //turn output of LT8722 off
+        digitalWrite(PINFANCONTROL, LOW);
         xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
           dataTests.infoInformation = 0;
         xSemaphoreGive(SemaphoreDataTests);
@@ -464,6 +481,7 @@ void taskdisplay_loop(void * parameter) {
       } else if (dataTests.buttonResetTestPressed) {
         testRunning = false;                                                                                        
         peltierDriver.reset();                                                 //reset all registers of LT8722
+        digitalWrite(PINFANCONTROL, LOW);
         xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
           dataTests.infoInformation = 0;
         xSemaphoreGive(SemaphoreDataTests);
@@ -637,6 +655,7 @@ void tasktest_loop(void * parameter) {
           testRunning = false;
           testRunningFirst = true;
           peltierDriver.powerOff();
+          digitalWrite(PINFANCONTROL, LOW);
           xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
             dataTests.infoInformation = 3;
           xSemaphoreGive(SemaphoreDataTests);
@@ -653,6 +672,7 @@ void tasktest_loop(void * parameter) {
           testRunning = false;
           testRunningFirst = true;
           peltierDriver.powerOff();
+          digitalWrite(PINFANCONTROL, LOW);
           xSemaphoreTake(SemaphoreDataTests, portMAX_DELAY);
             dataTests.infoInformation = 2;
           xSemaphoreGive(SemaphoreDataTests);
@@ -692,6 +712,7 @@ void tasktest_loop(void * parameter) {
             testRunning = false;
             vTaskDelay(pdMS_TO_TICKS(500));
             peltierDriver.powerOff();
+            digitalWrite(PINFANCONTROL, LOW);
             xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
               Setpoint = 10;
               Output = 0;
@@ -777,6 +798,15 @@ void setup() {
   peltierPID.SetOutputLimits(-4.3, 4.3);                                //set min and max output limits in V
   peltierPID.SetControllerDirection(peltierPID.Action::reverse);        //set PID to reverse mode
   peltierPID.SetMode(peltierPID.Control::automatic);                    //turn the PID on
+
+  pinMode(PINFANCONTROL, OUTPUT);                                       //set fan pin to output
+  digitalWrite(PINFANCONTROL, LOW);
+
+  pinMode(PINH2SENSOR1CONTROL, OUTPUT);                                 //set H2 sensor 1 pin to output
+  digitalWrite(PINH2SENSOR1CONTROL, LOW);
+
+  pinMode(PINH2SENSOR2CONTROL, OUTPUT);                                 //set H2 sensor 2 pin to output
+  digitalWrite(PINH2SENSOR2CONTROL, LOW);
 
   //semaphores to make the data exchange between the tasks possible
   SemaphoreDataControl = xSemaphoreCreateMutex();
