@@ -24,6 +24,7 @@
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: (1.0.0) docs: added LICENSE and changed README.md
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: (1.1.0) func: added correct H2 sensor measurement
  * Date: 2025-02-04 Author: Jan kleine Piening Comments: (1.2.0) func: added fan and H2 sensor control
+ * Date: 2025-02-06 Author: Jan kleine Piening Comments: (1.3.0) func: tuned PID and changed the RTD_ALPHA and RTD_BETA values
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -39,15 +40,15 @@
 #include "LT8722.h"
 #include "ControlTFT.h"
 
-#define PINH2SENSOR1 15      //analog read pin of the first H2 sensor
-#define PINH2SENSOR2 16      //analog read pin of the second H2 sensor
+#define PINH2SENSOR1 15         //analog read pin of the first H2 sensor
+#define PINH2SENSOR2 16         //analog read pin of the second H2 sensor
 
 #define PINFANCONTROL 21        //output pin to turn on the fan
 #define PINH2SENSOR1CONTROL 47  //output pin to turn on the H2 sensor 1
 #define PINH2SENSOR2CONTROL 48  //output pin to turn on the H2 sensor 2
 
-#define RTD_A 2.283e-3    //alpha of the PT1000
-#define RTD_B -5.775e-7   //beta of the PT1000
+#define RTD_ALPHA 3.0e-3        //alpha of the PT1000
+#define RTD_BETA -3.12e-6       //beta of the PT1000
 
 //taskhandle for the different tasks
 TaskHandle_t TaskCompute;
@@ -68,14 +69,14 @@ LT8722 peltierDriver;                                     //create a LT8722 obje
 SPIClass fspi(FSPI);
 Adafruit_MAX31865 pt1000 = Adafruit_MAX31865(9, &fspi);   //create a Adafruit_MAX31865 object with FSPI
 
-float Kp = 0.09, Ki = 0.25, Kd = 0;                       //PID tuning parameters 
+float Kp = 0.31, Ki = 0.6, Kd = 0;                      //PID tuning parameters 
 float Setpoint = 10, Input, Output;                       //variables for PID      
 QuickPID peltierPID(&Input, &Output, &Setpoint);          //specify PID links
 
 ControlTFT display;                                       //create a TFT_eSPI object
 
 const float refResistance = 4300.0;                       //the value of the Rref resistor
-float nominalResistance   = 898;                          //the 'nominal' 0-degrees-C resistance of the sensor
+float nominalResistance   = 872.3;                        //the 'nominal' 0-degrees-C resistance of the sensor
 uint16_t RTDraw           = 0;                            //raw RTD value of the PT1000
 double currentResistance  = 0;                            //calculates PT1000 resistance
 
@@ -395,7 +396,7 @@ void taskdisplay_loop(void * parameter) {
         changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.1, &Output, -4, 4);
       } else {
         xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
-          changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.5, &Setpoint, -15, 100);
+          changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.5, &Setpoint, -10, 100);
         xSemaphoreGive(SemaphoreDataPID);
       }
 
@@ -443,7 +444,7 @@ void taskdisplay_loop(void * parameter) {
         changeValue(dataTests.buttonIncreaseFallStepSizePressed, dataTests.buttonDecreaseFallStepSizePressed, 0.1, &fallStepSize,      0.1, (-endValue+startValue));
         changeValue(dataTests.buttonIncreaseNumberCyclesPressed, dataTests.buttonDecreaseNumberCyclesPressed,   1, &numberCycles,        1, 999999);
       } else {
-        changeValue(dataTests.buttonIncreaseStartValuePressed  , dataTests.buttonDecreaseStartValuePressed  , 0.5, &startValue  ,        -15, endValue);
+        changeValue(dataTests.buttonIncreaseStartValuePressed  , dataTests.buttonDecreaseStartValuePressed  , 0.5, &startValue  ,        -10, endValue);
         changeValue(dataTests.buttonIncreaseEndValuePressed    , dataTests.buttonDecreaseEndValuePressed    , 0.5, &endValue    , startValue, 100);
         changeValue(dataTests.buttonIncreaseRiseTimePressed    , dataTests.buttonDecreaseRiseTimePressed    , 0.5, &riseTime    ,        0.5, 999999);
         changeValue(dataTests.buttonIncreaseFallTimePressed    , dataTests.buttonDecreaseFallTimePressed    , 0.5, &fallTime    ,        0.5, 999999);
@@ -648,7 +649,7 @@ void tasktest_loop(void * parameter) {
         testRunningFirst = false;
 
         //delay task for 20s to reach the setpoint
-        xDelayTime = pdMS_TO_TICKS(20000);
+        xDelayTime = pdMS_TO_TICKS(50000);
 
         //check for an incorrect data input
         if((voltageControlActive && (endValue > startValue)) || (!voltageControlActive && (endValue < startValue))) {
@@ -795,7 +796,7 @@ void setup() {
   peltierDriver.begin();                                                //initialize the SPI interface with the standard pins
   
   peltierPID.SetTunings(Kp, Ki, Kd);                                    //apply PID gains
-  peltierPID.SetOutputLimits(-4.3, 4.3);                                //set min and max output limits in V
+  peltierPID.SetOutputLimits(-4, 4);                                //set min and max output limits in V
   peltierPID.SetControllerDirection(peltierPID.Action::reverse);        //set PID to reverse mode
   peltierPID.SetMode(peltierPID.Control::automatic);                    //turn the PID on
 
@@ -955,10 +956,10 @@ float calculateTemperature(uint16_t RTDraw, float RTDnominal, float refResistor)
 
   // Serial.print("\nResistance: "); Serial.println(Rt, 8);
 
-  Z1 = -RTD_A;
-  Z2 = RTD_A * RTD_A - (4 * RTD_B);
-  Z3 = (4 * RTD_B) / RTDnominal;
-  Z4 = 2 * RTD_B;
+  Z1 = -RTD_ALPHA;
+  Z2 = RTD_ALPHA * RTD_ALPHA - (4 * RTD_BETA);
+  Z3 = (4 * RTD_BETA) / RTDnominal;
+  Z4 = 2 * RTD_BETA;
 
   temp = Z2 + (Z3 * Rt);
   temp = (sqrt(temp) + Z1) / Z4;
