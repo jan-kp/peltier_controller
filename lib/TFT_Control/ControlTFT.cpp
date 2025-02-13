@@ -473,13 +473,12 @@ controlData ControlTFT::drawControlTab(controlData data) {
     data.buttonIncreaseSetValuePressed = _buttonIncreaseSetValue.pressed;
 
     if (!_controlRunning) {
-    _buttonVoltageControl = buttonPressed(_buttonVoltageControl, t_x, t_y, pressed);
-    data.buttonVoltageControlPreviouslyPressed = data.buttonVoltageControlPressed;
-    data.buttonVoltageControlPressed = _buttonVoltageControl.pressed;
+      _buttonVoltageControl = buttonPressed(_buttonVoltageControl, t_x, t_y, pressed);
 
       if (_buttonVoltageControl.pressed && !_buttonVoltageControl.previouslyPressed) {
         if (_buttonVoltageControl.pressed && _voltageControlActive) {
           _voltageControlActive = false;
+          data.voltageControlActive = false;
           _buttonVoltageControl.name = "Temp.";
           _textSetValue.name = "Temp. Set:";
           _textStartValue.name = "Start Temp.:";
@@ -493,6 +492,7 @@ controlData ControlTFT::drawControlTab(controlData data) {
           drawText(_textSetValue, ML_DATUM);
         } else if (_buttonVoltageControl.pressed && !_voltageControlActive) {
           _voltageControlActive = true;
+          data.voltageControlActive = true;
           _buttonVoltageControl.name = "Voltage";
           _textSetValue.name = "Voltage Set:";
           _textStartValue.name = "Start Voltage:";

@@ -25,6 +25,7 @@
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: (1.1.0) func: added correct H2 sensor measurement
  * Date: 2025-02-04 Author: Jan kleine Piening Comments: (1.2.0) func: added fan and H2 sensor control
  * Date: 2025-02-06 Author: Jan kleine Piening Comments: (1.3.0) func: tuned PID and changed the RTD_ALPHA and RTD_BETA values
+ * Date: 2025-02-13 Author: Jan kleine Piening Comments: (1.3.1) fix: changed the button press recognition of voltageControlActive
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -40,8 +41,8 @@
 #include "LT8722.h"
 #include "ControlTFT.h"
 
-#define PINH2SENSOR1 15         //analog read pin of the first H2 sensor
-#define PINH2SENSOR2 16         //analog read pin of the second H2 sensor
+#define PINH2SENSOR1  4         //analog read pin of the first H2 sensor
+#define PINH2SENSOR2 5          //analog read pin of the second H2 sensor
 
 #define PINFANCONTROL 21        //output pin to turn on the fan
 #define PINH2SENSOR1CONTROL 47  //output pin to turn on the H2 sensor 1
@@ -137,56 +138,56 @@ void taskcompute_loop(void * parameter) {
       currentResistance *= refResistance;
 
       //update the value only if it has the token
-        if (tokenGlobal == 0) {
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueChipTemperature = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::TEMPERATURE);
-          xSemaphoreGive(SemaphoreDataControl);
-          tokenGlobal = 1;
-        } else if (tokenGlobal == 1) {
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueOutputVoltage = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::VOLTAGE);
-          xSemaphoreGive(SemaphoreDataControl);
-          tokenGlobal = 2;
-        } else if (tokenGlobal == 2) {
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueOutputCurrent = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::CURRENT);
-          xSemaphoreGive(SemaphoreDataControl);
+      if (tokenGlobal == 0) {
+        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+          dataControl.valueChipTemperature = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::TEMPERATURE);
+        xSemaphoreGive(SemaphoreDataControl);
+        tokenGlobal = 1;
+      } else if (tokenGlobal == 1) {
+        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+          dataControl.valueOutputVoltage = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::VOLTAGE);
+        xSemaphoreGive(SemaphoreDataControl);
+        tokenGlobal = 2;
+      } else if (tokenGlobal == 2) {
+        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+          dataControl.valueOutputCurrent = peltierDriver.readAnalogOutput(ANALOG_OUTPUT::CURRENT);
+        xSemaphoreGive(SemaphoreDataControl);
+        tokenGlobal = 0;
+      } else {
           tokenGlobal = 0;
-        } else {
-          tokenGlobal = 0;
         }
 
-        //Measure H2 Sensor 1
-        if (MeasurementH2Sensor1Running) {
-          double voltage = analogRead(PINH2SENSOR1);
-          voltage /= 1000;
+      //Measure H2 Sensor 1
+      if (MeasurementH2Sensor1Running) {
+      double voltage1 = analogReadMilliVolts(PINH2SENSOR1);
+      voltage1 /= 1000;
 
-          double concentration = voltage / 0.588;
-          concentration = (concentration - 0.527) / 0.986;
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor1 = concentration;
-          xSemaphoreGive(SemaphoreDataControl);
-        } else {
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor1 = 0.0;
-          xSemaphoreGive(SemaphoreDataControl);
-        }
+      double concentration1 = voltage1 / 0.5986;
+      concentration1 = (concentration1 - 0.527) / 0.986;
+      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+        dataControl.valueMeasureH2Sensor1 = concentration1;
+      xSemaphoreGive(SemaphoreDataControl);
+    } else {
+      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+        dataControl.valueMeasureH2Sensor1 = 0.0;
+      xSemaphoreGive(SemaphoreDataControl);
+    }
 
-        //Measure H2 Sensor 2
-        if (MeasurementH2Sensor2Running) {
-          double voltage = analogRead(PINH2SENSOR2);
-          voltage /= 1000;
+    //Measure H2 Sensor 2
+    if (MeasurementH2Sensor2Running) {
+      double voltage2 = analogReadMilliVolts(PINH2SENSOR2);
+      voltage2 /= 1000;
 
-          double concentration = voltage / 0.59;
-          concentration = (concentration - 0.505) / 0.981;
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor2 = concentration;
-          xSemaphoreGive(SemaphoreDataControl);
-        } else {
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor2 = 0.0;
-          xSemaphoreGive(SemaphoreDataControl);
-        }
+      double concentration2 = voltage2 / 0.6004;
+      concentration2 = (concentration2 - 0.505) / 0.981;
+      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+        dataControl.valueMeasureH2Sensor2 = concentration2;
+      xSemaphoreGive(SemaphoreDataControl);
+    } else {
+      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+        dataControl.valueMeasureH2Sensor2 = 0.0;
+      xSemaphoreGive(SemaphoreDataControl);
+    }
     }
 
     //trun off the peltier driver an control or test running if an communication error occurred
@@ -252,13 +253,13 @@ void taskcompute_loop(void * parameter) {
 
         //Measure H2 Sensor 1
         if (MeasurementH2Sensor1Running) {
-          double voltage = analogRead(PINH2SENSOR1);
-          voltage /= 1000;
+          double voltage1 = analogReadMilliVolts(PINH2SENSOR1);
+          voltage1 /= 1000;
 
-          double concentration = voltage / 0.585;
-          concentration = (concentration - 0.527) / 0.986;
+          double concentration1 = voltage1 / 0.5986;
+          concentration1 = (concentration1 - 0.527) / 0.986;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor1 = concentration;
+            dataControl.valueMeasureH2Sensor1 = concentration1;
           xSemaphoreGive(SemaphoreDataControl);
         } else {
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
@@ -266,15 +267,15 @@ void taskcompute_loop(void * parameter) {
           xSemaphoreGive(SemaphoreDataControl);
         }
 
-        //Measure H2 Sensor 1
+        //Measure H2 Sensor 2
         if (MeasurementH2Sensor2Running) {
-          double voltage = analogRead(PINH2SENSOR2);
-          voltage /= 1000;
+          double voltage2 = analogReadMilliVolts(PINH2SENSOR2);
+          voltage2 /= 1000;
 
-          double concentration = voltage / 0.59;
-          concentration = (concentration - 0.505) / 0.981;
+          double concentration2 = voltage2 / 0.6004;
+          concentration2 = (concentration2 - 0.505) / 0.981;
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor2 = concentration;
+            dataControl.valueMeasureH2Sensor2 = concentration2;
           xSemaphoreGive(SemaphoreDataControl);
         } else {
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
@@ -284,8 +285,8 @@ void taskcompute_loop(void * parameter) {
       }
 
       //behaviour if the activate voltage control button is pressed
-      if (dataControl.buttonVoltageControlPressed && !dataControl.buttonVoltageControlPreviouslyPressed) {
-        voltageControlActive = !voltageControlActive;
+      if (voltageControlActive != dataControl.voltageControlActive) {
+        voltageControlActive = dataControl.voltageControlActive;
 
         if (voltageControlActive) {
           startValue   = 3;
@@ -294,6 +295,7 @@ void taskcompute_loop(void * parameter) {
           fallTime     = 60;
           riseStepSize = 0.1;
           fallStepSize = 0.1;
+          Output = 0;
         } else {
           startValue   = 0;
           endValue     = 60;
@@ -301,6 +303,7 @@ void taskcompute_loop(void * parameter) {
           fallTime     = 30;
           riseStepSize = 0.5;
           fallStepSize = 0.5;
+          Setpoint = 10;
         }
         
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -309,7 +312,6 @@ void taskcompute_loop(void * parameter) {
       //update the H2 sensor 1 button state
       if(dataControl.buttonMeasureH2Sensor1StartPressed) {
         digitalWrite(PINH2SENSOR1CONTROL, HIGH);
-        vTaskDelay(pdMS_TO_TICKS(2000));                          //delay 2s to wait for response time
         MeasurementH2Sensor1Running = true;
       } else if (dataControl.buttonMeasureH2Sensor1StopPressed) {
         digitalWrite(PINH2SENSOR1CONTROL, LOW);
@@ -319,7 +321,6 @@ void taskcompute_loop(void * parameter) {
       //update the H2 sensor 2 button state
       if(dataControl.buttonMeasureH2Sensor2StartPressed) {
         digitalWrite(PINH2SENSOR2CONTROL, HIGH);
-        vTaskDelay(pdMS_TO_TICKS(2000));                          //delay 2s to wait for response time
         MeasurementH2Sensor2Running = true;
       } else if (dataControl.buttonMeasureH2Sensor2StopPressed) {
         digitalWrite(PINH2SENSOR2CONTROL, LOW);
@@ -649,7 +650,7 @@ void tasktest_loop(void * parameter) {
         testRunningFirst = false;
 
         //delay task for 20s to reach the setpoint
-        xDelayTime = pdMS_TO_TICKS(50000);
+        xDelayTime = pdMS_TO_TICKS(40000);
 
         //check for an incorrect data input
         if((voltageControlActive && (endValue > startValue)) || (!voltageControlActive && (endValue < startValue))) {
@@ -796,7 +797,7 @@ void setup() {
   peltierDriver.begin();                                                //initialize the SPI interface with the standard pins
   
   peltierPID.SetTunings(Kp, Ki, Kd);                                    //apply PID gains
-  peltierPID.SetOutputLimits(-4, 4);                                //set min and max output limits in V
+  peltierPID.SetOutputLimits(-4.3, 4.3);                                //set min and max output limits in V
   peltierPID.SetControllerDirection(peltierPID.Action::reverse);        //set PID to reverse mode
   peltierPID.SetMode(peltierPID.Control::automatic);                    //turn the PID on
 

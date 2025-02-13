@@ -134,9 +134,7 @@ struct controlData {
     bool   buttonDecreaseSetValuePressed;
     bool   buttonIncreaseSetValuePressed;
     bool   eventCommunicationError;
-    bool   buttonVoltageControlPressed;
-    bool   buttonVoltageControlPreviouslyPressed;
-    bool   buttonVoltageControl;
+    bool   voltageControlActive;
     bool   buttonResetPressed;
     bool   buttonStopPressed;
     bool   buttonStartPressed;
