@@ -25,7 +25,8 @@
  * Date: 2025-02-03 Author: Jan kleine Piening Comments: (1.1.0) func: added correct H2 sensor measurement
  * Date: 2025-02-04 Author: Jan kleine Piening Comments: (1.2.0) func: added fan and H2 sensor control
  * Date: 2025-02-06 Author: Jan kleine Piening Comments: (1.3.0) func: tuned PID and changed the RTD_ALPHA and RTD_BETA values
- * Date: 2025-02-13 Author: Jan kleine Piening Comments: (1.3.1) fix: changed the button press recognition of voltageControlActive
+ * Date: 2025-02-13 Author: Jan kleine Piening Comments: (1.3.1) fix: changed the button press recognition of voltageControlActive and the pins of H2 sensor 1 & 2
+ * Date: 2025-03-20 Author: Jan kleine Piening Comments: (1.3.2) docs: added CITATION.cff and changed README.md
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -41,7 +42,7 @@
 #include "LT8722.h"
 #include "ControlTFT.h"
 
-#define PINH2SENSOR1  4         //analog read pin of the first H2 sensor
+#define PINH2SENSOR1 4         //analog read pin of the first H2 sensor
 #define PINH2SENSOR2 5          //analog read pin of the second H2 sensor
 
 #define PINFANCONTROL 21        //output pin to turn on the fan

@@ -1,5 +1,7 @@
 # Peltier Controller
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15052629.svg)](https://doi.org/10.5281/zenodo.15052629)
+
 ## Overview
 This code is used to set up and control a measurement setup. The measurement setup contains a peltier element to set temperatures between -5 °C and 150 °C and a TFT touch display with SPI and the ILI9488 driver to display current information and to be able to configure and start tests. In addition, two external hydrogen sensors can be connected which output a voltage in relation to the hydrogen concentration. Furthermore, a custom chip with an integrated PT1000 is required to determine the current temperature of the Peltier element. A MAX31865 with the Adafruid PCB layout is used for this purpose.
 
