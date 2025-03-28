@@ -135,6 +135,7 @@ struct controlData {
     bool   buttonIncreaseSetValuePressed;
     bool   eventCommunicationError;
     bool   voltageControlActive;
+    bool   buttonHeaderPressed;
     bool   buttonResetPressed;
     bool   buttonStopPressed;
     bool   buttonStartPressed;
@@ -441,6 +442,7 @@ private:
     struct button _buttonDecreaseSetValue;
     struct button _buttonIncreaseSetValue;
     struct button _buttonVoltageControl;
+    struct button _buttonHeader;
     struct button _buttonReset;
     struct button _buttonStop;
     struct button _buttonStart; 

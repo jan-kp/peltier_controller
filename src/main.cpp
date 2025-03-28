@@ -29,6 +29,7 @@
  * Date: 2025-03-20 Author: Jan kleine Piening Comments: (1.3.2) docs: added CITATION.cff and changed README.md
  * Date: 2025-03-25 Author: Jan kleine Piening Comments: (1.4.0) func: added different PID constants for heating and cooling
  * Date: 2025-03-28 Author: Jan kleine Piening Comments: (1.4.1) fix: adjusted PID parameters and fixed H2 Sensor readout
+ * Date: 2025-03-28 Author: Jan kleine Piening Comments: (1.5.0) func: added print header button
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -414,6 +415,11 @@ void taskdisplay_loop(void * parameter) {
 
       //change R0 on button press
       changeValue(dataControl.buttonIncreaseNominalResistancePressed, dataControl.buttonDecreaseNominalResistancePressed, 0.1, &nominalResistance, 600, 1200);
+
+      //check header button press
+      if(dataControl.buttonHeaderPressed && !buttonPressed) {
+        printHeader();
+      }
 
       //behaviour for start, stop and reset button pressed
       if (dataControl.buttonStartPressed && !dataTests.buttonStartTestPreviouslyPressed && !controlRunning && !dataControl.eventCommunicationError) {
@@ -940,7 +946,7 @@ void changeValue(bool increase, bool decrease, double step, float* value, float 
 */
 /**************************************************************************/
 void checkButtonPressed() {
-  if (!dataControl.buttonIncreaseSetValuePressed && !dataControl.buttonDecreaseSetValuePressed && !dataControl.buttonIncreaseNominalResistancePressed && !dataControl.buttonDecreaseNominalResistancePressed && !dataTests.buttonIncreaseStartValuePressed && !dataTests.buttonDecreaseStartValuePressed && !dataTests.buttonIncreaseEndValuePressed && !dataTests.buttonDecreaseEndValuePressed && !dataTests.buttonIncreaseRiseTimePressed && !dataTests.buttonDecreaseRiseTimePressed && !dataTests.buttonIncreaseFallTimePressed && !dataTests.buttonDecreaseFallTimePressed && !dataTests.buttonIncreaseRiseStepSizePressed && !dataTests.buttonDecreaseRiseStepSizePressed && !dataTests.buttonIncreaseFallStepSizePressed && !dataTests.buttonDecreaseFallStepSizePressed && !dataTests.buttonIncreaseNumberCyclesPressed && !dataTests.buttonDecreaseNumberCyclesPressed) {
+  if (!dataControl.buttonIncreaseSetValuePressed && !dataControl.buttonDecreaseSetValuePressed && !dataControl.buttonIncreaseNominalResistancePressed && !dataControl.buttonDecreaseNominalResistancePressed && !dataControl.buttonHeaderPressed && !dataTests.buttonIncreaseStartValuePressed && !dataTests.buttonDecreaseStartValuePressed && !dataTests.buttonIncreaseEndValuePressed && !dataTests.buttonDecreaseEndValuePressed && !dataTests.buttonIncreaseRiseTimePressed && !dataTests.buttonDecreaseRiseTimePressed && !dataTests.buttonIncreaseFallTimePressed && !dataTests.buttonDecreaseFallTimePressed && !dataTests.buttonIncreaseRiseStepSizePressed && !dataTests.buttonDecreaseRiseStepSizePressed && !dataTests.buttonIncreaseFallStepSizePressed && !dataTests.buttonDecreaseFallStepSizePressed && !dataTests.buttonIncreaseNumberCyclesPressed && !dataTests.buttonDecreaseNumberCyclesPressed) {
     buttonPressed = false;
   } else {
     if (!buttonPressed) {

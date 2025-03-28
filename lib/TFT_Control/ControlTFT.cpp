@@ -79,6 +79,7 @@ void ControlTFT::begin(){
   _buttonDecreaseSetValue          = {"Down",    311, 216,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
   _buttonIncreaseSetValue          = {"Up",      387, 216,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
   _buttonVoltageControl            = {"Temp.",   311, 243, 146,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
+  _buttonHeader                    = {"H",       118, 276,  35,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
   _buttonReset                     = {"Reset",   235, 276,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
   _buttonStop                      = {"Stop",    311, 276,  70,  21, 10, BLACK, LIGHT_GREY, GREY, false, false};
   _buttonStart                     = {"Start",   387, 276,  70,  21, 10, BLACK, LIGHT_GREY, BLUE, false, false};
@@ -457,6 +458,10 @@ controlData ControlTFT::drawControlTab(controlData data) {
   _buttonMeasureH2Sensor2Start = buttonPressed(_buttonMeasureH2Sensor2Start, t_x, t_y, pressed);
   data.buttonMeasureH2Sensor2StartPressed = _buttonMeasureH2Sensor2Start.pressed;
   lockButton(&_buttonMeasureH2Sensor2Start, &_measurementH2Sensor2Running);
+
+  //check print header button
+  _buttonHeader = buttonPressed(_buttonHeader, t_x, t_y, pressed);
+  data.buttonHeaderPressed = _buttonHeader.pressed;
 
   //buttons can only be pressed if no test is running
   if (!_testRunning) {
