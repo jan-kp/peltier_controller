@@ -27,6 +27,8 @@
  * Date: 2025-02-06 Author: Jan kleine Piening Comments: (1.3.0) func: tuned PID and changed the RTD_ALPHA and RTD_BETA values
  * Date: 2025-02-13 Author: Jan kleine Piening Comments: (1.3.1) fix: changed the button press recognition of voltageControlActive and the pins of H2 sensor 1 & 2
  * Date: 2025-03-20 Author: Jan kleine Piening Comments: (1.3.2) docs: added CITATION.cff and changed README.md
+ * Date: 2025-03-25 Author: Jan kleine Piening Comments: (1.4.0) func: added different PID constants for heating and cooling
+ * Date: 2025-03-28 Author: Jan kleine Piening Comments: (1.4.1) fix: adjusted PID parameters and fixed H2 Sensor readout
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -49,8 +51,8 @@
 #define PINH2SENSOR1CONTROL 47  //output pin to turn on the H2 sensor 1
 #define PINH2SENSOR2CONTROL 48  //output pin to turn on the H2 sensor 2
 
-#define RTD_ALPHA 3.0e-3        //alpha of the PT1000
-#define RTD_BETA -3.12e-6       //beta of the PT1000
+#define RTD_ALPHA 2.9e-3        //alpha of the PT1000
+#define RTD_BETA -2.4e-6       //beta of the PT1000
 
 //taskhandle for the different tasks
 TaskHandle_t TaskCompute;
@@ -71,14 +73,15 @@ LT8722 peltierDriver;                                     //create a LT8722 obje
 SPIClass fspi(FSPI);
 Adafruit_MAX31865 pt1000 = Adafruit_MAX31865(9, &fspi);   //create a Adafruit_MAX31865 object with FSPI
 
-float Kp = 0.31, Ki = 0.6, Kd = 0;                      //PID tuning parameters 
+float Kp_cool = 0.10224, Ki_cool = 0.06196, Kd_cool = 0;         //PID tuning parameters for cooling
+float Kp_heat = 0.06375, Ki_heat = 0.03863, Kd_heat = 0;        //PID tuning parameters for heating
 float Setpoint = 10, Input, Output;                       //variables for PID      
 QuickPID peltierPID(&Input, &Output, &Setpoint);          //specify PID links
 
 ControlTFT display;                                       //create a TFT_eSPI object
 
 const float refResistance = 4300.0;                       //the value of the Rref resistor
-float nominalResistance   = 872.3;                        //the 'nominal' 0-degrees-C resistance of the sensor
+float nominalResistance   = 787.5;                        //the 'nominal' 0-degrees-C resistance of the sensor
 uint16_t RTDraw           = 0;                            //raw RTD value of the PT1000
 double currentResistance  = 0;                            //calculates PT1000 resistance
 
@@ -160,35 +163,33 @@ void taskcompute_loop(void * parameter) {
 
       //Measure H2 Sensor 1
       if (MeasurementH2Sensor1Running) {
-      double voltage1 = analogReadMilliVolts(PINH2SENSOR1);
-      voltage1 /= 1000;
+        double voltage1 = analogReadMilliVolts(PINH2SENSOR1);
+        voltage1 /= 1000;
 
-      double concentration1 = voltage1 / 0.5986;
-      concentration1 = (concentration1 - 0.527) / 0.986;
-      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-        dataControl.valueMeasureH2Sensor1 = concentration1;
-      xSemaphoreGive(SemaphoreDataControl);
-    } else {
-      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-        dataControl.valueMeasureH2Sensor1 = 0.0;
-      xSemaphoreGive(SemaphoreDataControl);
-    }
+        double concentration1 = (voltage1 - 0.527) / 0.986;
+        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+          dataControl.valueMeasureH2Sensor1 = concentration1;
+        xSemaphoreGive(SemaphoreDataControl);
+      } else {
+        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+          dataControl.valueMeasureH2Sensor1 = 0.0;
+        xSemaphoreGive(SemaphoreDataControl);
+      }
 
-    //Measure H2 Sensor 2
-    if (MeasurementH2Sensor2Running) {
-      double voltage2 = analogReadMilliVolts(PINH2SENSOR2);
-      voltage2 /= 1000;
+      //Measure H2 Sensor 2
+      if (MeasurementH2Sensor2Running) {
+        double voltage2 = analogReadMilliVolts(PINH2SENSOR2);
+        voltage2 /= 1000;
 
-      double concentration2 = voltage2 / 0.6004;
-      concentration2 = (concentration2 - 0.505) / 0.981;
-      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-        dataControl.valueMeasureH2Sensor2 = concentration2;
-      xSemaphoreGive(SemaphoreDataControl);
-    } else {
-      xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-        dataControl.valueMeasureH2Sensor2 = 0.0;
-      xSemaphoreGive(SemaphoreDataControl);
-    }
+        double concentration2 = (voltage2 - 0.505) / 0.981;
+        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+          dataControl.valueMeasureH2Sensor2 = concentration2;
+        xSemaphoreGive(SemaphoreDataControl);
+      } else {
+        xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+          dataControl.valueMeasureH2Sensor2 = 0.0;
+        xSemaphoreGive(SemaphoreDataControl);
+      }
     }
 
     //trun off the peltier driver an control or test running if an communication error occurred
@@ -244,8 +245,12 @@ void taskcompute_loop(void * parameter) {
           xSemaphoreGive(SemaphoreDataControl);
           tokenControl = 3;
         } else if (tokenControl == 3) {
+          RTDraw = pt1000.readRTD();
+          currentResistance = double(RTDraw) / 32768;
+          currentResistance *= refResistance;
+          Input = calculateTemperature(RTDraw, nominalResistance, refResistance);
           xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueCurrentTemperature = calculateTemperature(pt1000.readRTD(), nominalResistance, refResistance);
+            dataControl.valueCurrentTemperature = calculateTemperature(RTDraw, nominalResistance, refResistance);
           xSemaphoreGive(SemaphoreDataControl);
           tokenControl = 0;
         } else {
@@ -253,36 +258,36 @@ void taskcompute_loop(void * parameter) {
         }
 
         //Measure H2 Sensor 1
-        if (MeasurementH2Sensor1Running) {
-          double voltage1 = analogReadMilliVolts(PINH2SENSOR1);
-          voltage1 /= 1000;
+        if (!(controlRunning || testRunning)) {
+          if (MeasurementH2Sensor1Running) {
+            double voltage1 = analogReadMilliVolts(PINH2SENSOR1);
+            voltage1 /= 1000;
 
-          double concentration1 = voltage1 / 0.5986;
-          concentration1 = (concentration1 - 0.527) / 0.986;
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor1 = concentration1;
-          xSemaphoreGive(SemaphoreDataControl);
-        } else {
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor1 = 0.0;
-          xSemaphoreGive(SemaphoreDataControl);
-        }
+            double concentration1 = (voltage1 - 0.527) / 0.986;
+            xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+              dataControl.valueMeasureH2Sensor1 = concentration1;
+            xSemaphoreGive(SemaphoreDataControl);
+          } else {
+            xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+              dataControl.valueMeasureH2Sensor1 = 0.0;
+            xSemaphoreGive(SemaphoreDataControl);
+          }
 
-        //Measure H2 Sensor 2
-        if (MeasurementH2Sensor2Running) {
-          double voltage2 = analogReadMilliVolts(PINH2SENSOR2);
-          voltage2 /= 1000;
+          //Measure H2 Sensor 2
+          if (MeasurementH2Sensor2Running) {
+            double voltage2 = analogReadMilliVolts(PINH2SENSOR2);
+            voltage2 /= 1000;
 
-          double concentration2 = voltage2 / 0.6004;
-          concentration2 = (concentration2 - 0.505) / 0.981;
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor2 = concentration2;
-          xSemaphoreGive(SemaphoreDataControl);
-        } else {
-          xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
-            dataControl.valueMeasureH2Sensor2 = 0.0;
-          xSemaphoreGive(SemaphoreDataControl);
-        }
+            double concentration2 = (voltage2 - 0.505) / 0.981;
+            xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+              dataControl.valueMeasureH2Sensor2 = concentration2;
+            xSemaphoreGive(SemaphoreDataControl);
+          } else {
+            xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
+              dataControl.valueMeasureH2Sensor2 = 0.0;
+            xSemaphoreGive(SemaphoreDataControl);
+          }
+        } 
       }
 
       //behaviour if the activate voltage control button is pressed
@@ -311,22 +316,27 @@ void taskcompute_loop(void * parameter) {
       }
 
       //update the H2 sensor 1 button state
-      if(dataControl.buttonMeasureH2Sensor1StartPressed) {
-        digitalWrite(PINH2SENSOR1CONTROL, HIGH);
-        MeasurementH2Sensor1Running = true;
-      } else if (dataControl.buttonMeasureH2Sensor1StopPressed) {
-        digitalWrite(PINH2SENSOR1CONTROL, LOW);
-        MeasurementH2Sensor1Running = false;
+      if (!MeasurementH2Sensor2Running) {
+        if(dataControl.buttonMeasureH2Sensor1StartPressed) {
+          digitalWrite(PINH2SENSOR1CONTROL, HIGH);
+          MeasurementH2Sensor1Running = true;
+        } else if (dataControl.buttonMeasureH2Sensor1StopPressed) {
+          digitalWrite(PINH2SENSOR1CONTROL, LOW);
+          MeasurementH2Sensor1Running = false;
+        }
+      }
+      
+      //update the H2 sensor 2 button state
+      if (!MeasurementH2Sensor1Running) {
+        if(dataControl.buttonMeasureH2Sensor2StartPressed) {
+          digitalWrite(PINH2SENSOR2CONTROL, HIGH);
+          MeasurementH2Sensor2Running = true;
+        } else if (dataControl.buttonMeasureH2Sensor2StopPressed) {
+          digitalWrite(PINH2SENSOR2CONTROL, LOW);
+          MeasurementH2Sensor2Running = false;
+        }
       }
 
-      //update the H2 sensor 2 button state
-      if(dataControl.buttonMeasureH2Sensor2StartPressed) {
-        digitalWrite(PINH2SENSOR2CONTROL, HIGH);
-        MeasurementH2Sensor2Running = true;
-      } else if (dataControl.buttonMeasureH2Sensor2StopPressed) {
-        digitalWrite(PINH2SENSOR2CONTROL, LOW);
-        MeasurementH2Sensor2Running = false;
-      }
     } else if (display.getTab() == PRESSED_TAB::TESTS) {
 
       //update test values
@@ -398,7 +408,7 @@ void taskdisplay_loop(void * parameter) {
         changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.1, &Output, -4, 4);
       } else {
         xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
-          changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.5, &Setpoint, -10, 100);
+          changeValue(dataControl.buttonIncreaseSetValuePressed, dataControl.buttonDecreaseSetValuePressed, 0.5, &Setpoint, -15, 100);
         xSemaphoreGive(SemaphoreDataPID);
       }
 
@@ -496,16 +506,16 @@ void taskdisplay_loop(void * parameter) {
 
         if (voltageControlActive) {
           startValue   = 3;
-          endValue     = -2;
+          endValue     = -3;
           riseTime     = 60;
           fallTime     = 60;
           riseStepSize = 0.1;
           fallStepSize = 0.1;
         } else {
-          startValue   = 0;
-          endValue     = 60;
-          riseTime     = 30;
-          fallTime     = 30;
+          startValue   = -10;
+          endValue     = 100;
+          riseTime     = 60;
+          fallTime     = 60;
           riseStepSize = 0.5;
           fallStepSize = 0.5;
         }
@@ -555,6 +565,13 @@ void taskpid_loop(void * parameter) {
       } else {
         xSemaphoreTake(SemaphoreDataPID, portMAX_DELAY);
           Input = calculateTemperature(RTDraw, nominalResistance, refResistance);
+
+          if(Setpoint < 22) {
+            peltierPID.SetTunings(Kp_cool, Ki_cool, Kd_cool); //apply PID gains for cooling
+          } else {
+            peltierPID.SetTunings(Kp_heat, Ki_heat, Kd_heat); //apply PID gains for heating
+          }
+
           peltierPID.Compute();
         xSemaphoreGive(SemaphoreDataPID);
       }
@@ -793,11 +810,11 @@ void setup() {
   display.begin();                                                      //initialize the tft display
   display.drawTabSelect(true);                                          //draw the tab for the fist time
 
-  pt1000.begin(MAX31865_2WIRE);                                         //initialize pt1000 in 2 wire mode
+  pt1000.begin(MAX31865_4WIRE);                                         //initialize pt1000 in 2 wire mode
   
   peltierDriver.begin();                                                //initialize the SPI interface with the standard pins
   
-  peltierPID.SetTunings(Kp, Ki, Kd);                                    //apply PID gains
+  peltierPID.SetTunings(Kp_cool, Ki_cool, Kd_cool);                                    //apply PID gains
   peltierPID.SetOutputLimits(-4.3, 4.3);                                //set min and max output limits in V
   peltierPID.SetControllerDirection(peltierPID.Action::reverse);        //set PID to reverse mode
   peltierPID.SetMode(peltierPID.Control::automatic);                    //turn the PID on
