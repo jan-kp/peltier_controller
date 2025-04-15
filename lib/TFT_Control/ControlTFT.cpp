@@ -256,6 +256,7 @@ void ControlTFT::drawTabSelect(bool initial) {
       drawButton(_buttonVoltageControl);
 
       drawText(_textOutput, ML_DATUM);
+      drawButton(_buttonHeader);
       drawEvent(_eventCommunicationError);
       drawButton(_buttonReset);
       drawButton(_buttonStop);

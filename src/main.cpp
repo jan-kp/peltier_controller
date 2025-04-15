@@ -30,6 +30,7 @@
  * Date: 2025-03-25 Author: Jan kleine Piening Comments: (1.4.0) func: added different PID constants for heating and cooling
  * Date: 2025-03-28 Author: Jan kleine Piening Comments: (1.4.1) fix: adjusted PID parameters and fixed H2 Sensor readout
  * Date: 2025-03-28 Author: Jan kleine Piening Comments: (1.5.0) func: added print header button
+ * Date: 2025-04-15 Author: Jan kleine Piening Comments: (1.5.1) fix: improved data logging
  *
  * Author: Jan kleine Piening Start Date: 2025-01-06
  *
@@ -82,17 +83,20 @@ QuickPID peltierPID(&Input, &Output, &Setpoint);          //specify PID links
 ControlTFT display;                                       //create a TFT_eSPI object
 
 const float refResistance = 4300.0;                       //the value of the Rref resistor
-float nominalResistance   = 787.5;                        //the 'nominal' 0-degrees-C resistance of the sensor
+float nominalResistance   = 761.0;                        //the 'nominal' 0-degrees-C resistance of the sensor
 uint16_t RTDraw           = 0;                            //raw RTD value of the PT1000
 double currentResistance  = 0;                            //calculates PT1000 resistance
 
-float startValue   = 0.0;                                 //start temperature for the tests
-float endValue     = 60.0;                                //end temperature for the tests
-float riseTime     = 30.0;                                //rise time for the tests
-float fallTime     = 30.0;                                //fall time for the tests
-float riseStepSize = 0.5;                                 //rise step size for the tests
-float fallStepSize = 0.5;                                 //fall step size for the tests
-float numberCycles = 5.0;                                 //number of tests cycles
+float startValue   = 5.0;                                 //start temperature for the tests
+float endValue     = 100.0;                                //end temperature for the tests
+float riseTime     = 150;                                //rise time for the tests
+float fallTime     = 150;                                //fall time for the tests
+float riseStepSize = 0.2;                                 //rise step size for the tests
+float fallStepSize = 0.2;                                 //fall step size for the tests
+float numberCycles = 20;                                 //number of tests cycles
+
+double voltageH2Sensor1 = 0;
+double voltageH2Sensor2 = 0;
 
 bool controlRunning       = false;                        //indicates if control is running
 bool testRunning          = false;                        //indicates if a test is running
@@ -164,10 +168,10 @@ void taskcompute_loop(void * parameter) {
 
       //Measure H2 Sensor 1
       if (MeasurementH2Sensor1Running) {
-        double voltage1 = analogReadMilliVolts(PINH2SENSOR1);
-        voltage1 /= 1000;
+        voltageH2Sensor1 = analogReadMilliVolts(PINH2SENSOR1);
+        voltageH2Sensor1 /= 1000;
 
-        double concentration1 = (voltage1 - 0.527) / 0.986;
+        double concentration1 = (voltageH2Sensor1 - 0.9) / 0.887;
         xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
           dataControl.valueMeasureH2Sensor1 = concentration1;
         xSemaphoreGive(SemaphoreDataControl);
@@ -179,10 +183,10 @@ void taskcompute_loop(void * parameter) {
 
       //Measure H2 Sensor 2
       if (MeasurementH2Sensor2Running) {
-        double voltage2 = analogReadMilliVolts(PINH2SENSOR2);
-        voltage2 /= 1000;
+        voltageH2Sensor2 = analogReadMilliVolts(PINH2SENSOR2);
+        voltageH2Sensor2 /= 1000;
 
-        double concentration2 = (voltage2 - 0.505) / 0.981;
+        double concentration2 = (voltageH2Sensor2 - 0.854) / 0.889;
         xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
           dataControl.valueMeasureH2Sensor2 = concentration2;
         xSemaphoreGive(SemaphoreDataControl);
@@ -261,10 +265,10 @@ void taskcompute_loop(void * parameter) {
         //Measure H2 Sensor 1
         if (!(controlRunning || testRunning)) {
           if (MeasurementH2Sensor1Running) {
-            double voltage1 = analogReadMilliVolts(PINH2SENSOR1);
-            voltage1 /= 1000;
+            voltageH2Sensor1 = analogReadMilliVolts(PINH2SENSOR1);
+            voltageH2Sensor1 /= 1000;
 
-            double concentration1 = (voltage1 - 0.527) / 0.986;
+            double concentration1 = (voltageH2Sensor1 - 0.9) / 0.887;
             xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
               dataControl.valueMeasureH2Sensor1 = concentration1;
             xSemaphoreGive(SemaphoreDataControl);
@@ -276,10 +280,10 @@ void taskcompute_loop(void * parameter) {
 
           //Measure H2 Sensor 2
           if (MeasurementH2Sensor2Running) {
-            double voltage2 = analogReadMilliVolts(PINH2SENSOR2);
-            voltage2 /= 1000;
+            voltageH2Sensor2 = analogReadMilliVolts(PINH2SENSOR2);
+            voltageH2Sensor2 /= 1000;
 
-            double concentration2 = (voltage2 - 0.505) / 0.981;
+            double concentration2 = (voltageH2Sensor2 - 0.845) / 0.889;
             xSemaphoreTake(SemaphoreDataControl, portMAX_DELAY);
               dataControl.valueMeasureH2Sensor2 = concentration2;
             xSemaphoreGive(SemaphoreDataControl);
@@ -417,8 +421,9 @@ void taskdisplay_loop(void * parameter) {
       changeValue(dataControl.buttonIncreaseNominalResistancePressed, dataControl.buttonDecreaseNominalResistancePressed, 0.1, &nominalResistance, 600, 1200);
 
       //check header button press
-      if(dataControl.buttonHeaderPressed && !buttonPressed) {
+      if(dataControl.buttonHeaderPressed) {
         printHeader();
+        vTaskDelay(pdMS_TO_TICKS(500));
       }
 
       //behaviour for start, stop and reset button pressed
@@ -674,7 +679,7 @@ void tasktest_loop(void * parameter) {
         testRunningFirst = false;
 
         //delay task for 20s to reach the setpoint
-        xDelayTime = pdMS_TO_TICKS(40000);
+        xDelayTime = pdMS_TO_TICKS(60000);
 
         //check for an incorrect data input
         if((voltageControlActive && (endValue > startValue)) || (!voltageControlActive && (endValue < startValue))) {
@@ -1026,22 +1031,28 @@ void printData() {
     Serial.print(Input, 4);                             Serial.print(", ");
     Serial.print(currentResistance, 4);                 Serial.print(", ");
     Serial.print(Output, 4);                            Serial.print(", ");
+    Serial.print(voltageH2Sensor1, 4);                  Serial.print(", ");
+    Serial.print(voltageH2Sensor2, 4);                  Serial.print(", ");
     Serial.print(dataControl.valueMeasureH2Sensor1, 4); Serial.print(", ");
     Serial.print(dataControl.valueMeasureH2Sensor2, 4); Serial.print(", ");
     Serial.print(dataControl.valueOutputVoltage, 2);    Serial.print(", ");
     Serial.print(dataControl.valueOutputCurrent, 2);    Serial.print(", ");
-    Serial.println(dataControl.valueChipTemperature, 2);
+    Serial.print(dataControl.valueChipTemperature, 2);
+    Serial.print("\n");
   } else {
     Serial.print(currentTime - startTime, 4);           Serial.print(", ");
     Serial.print(Input, 4);                             Serial.print(", ");
-    Serial.print(currentResistance, 4);                        Serial.print(", ");
+    Serial.print(currentResistance, 4);                 Serial.print(", ");
     Serial.print(Setpoint, 1);                          Serial.print(", ");
     Serial.print(Output, 4);                            Serial.print(", ");
+    Serial.print(voltageH2Sensor1, 4);                  Serial.print(", ");
+    Serial.print(voltageH2Sensor2, 4);                  Serial.print(", ");
     Serial.print(dataControl.valueMeasureH2Sensor1, 4); Serial.print(", ");
     Serial.print(dataControl.valueMeasureH2Sensor2, 4); Serial.print(", ");
     Serial.print(dataControl.valueOutputVoltage, 2);    Serial.print(", ");
     Serial.print(dataControl.valueOutputCurrent, 2);    Serial.print(", ");
-    Serial.println(dataControl.valueChipTemperature, 2);
+    Serial.print(dataControl.valueChipTemperature, 2);
+    Serial.print("\n");
   }
 }
 
@@ -1051,41 +1062,43 @@ void printData() {
 */
 /**************************************************************************/
 void printHeader() {
-  Serial.println("----------------------------------------------------");
-  Serial.println("");
+  Serial.print("----------------------------------------------------"); Serial.print("\n");
+  Serial.print("");                                                     Serial.print("\n");
 
-  if (controlRunning) {
-    Serial.println("----------------------------------------------------");
-    Serial.println("Control Running:");
-    Serial.println("----------------------------------------------------");
-    Serial.println("");
-    Serial.print("Voltage Control Active:"); Serial.println(voltageControlActive);
-    Serial.println("");
-    Serial.println("----------------------------------------------------");
+ if (controlRunning) {
+    Serial.print("----------------------------------------------------"); Serial.print("\n");
+    Serial.print("Control Running:");                                     Serial.print("\n");
+    Serial.print("----------------------------------------------------"); Serial.print("\n"); 
+    Serial.print("");                                                     Serial.print("\n");
+    Serial.print("Voltage Control Active:"); Serial.print(voltageControlActive); Serial.print("\n");
+    Serial.print("R_0:"); Serial.print(nominalResistance);                    Serial.print("\n");
+    Serial.print("");                                                     Serial.print("\n");
+    Serial.print("----------------------------------------------------"); Serial.print("\n");
   } else if (testRunning) {
-    Serial.println("----------------------------------------------------");
-    Serial.println("Test Running:");
-    Serial.println("----------------------------------------------------");
-    Serial.println("");
-    Serial.print("Voltage Control Active:"); Serial.println(voltageControlActive);
-    Serial.println("");
+    Serial.print("----------------------------------------------------"); Serial.print("\n");
+    Serial.print("Test Running:");                                        Serial.print("\n");
+    Serial.print("----------------------------------------------------"); Serial.print("\n");
+    Serial.print("");                                                     Serial.print("\n"); 
+    Serial.print("Voltage Control Active:"); Serial.print(voltageControlActive); Serial.print("\n");
+    Serial.print("R_0:"); Serial.print(nominalResistance);                   Serial.print("\n");
+    Serial.print("");                                                    Serial.print("\n");
     if (voltageControlActive) {
-      Serial.print("Start Voltage:     "); Serial.println(startValue, 2);
-      Serial.print("End Voltage:       "); Serial.println(endValue, 2);
+      Serial.print("Start Voltage:     "); Serial.print(startValue, 2); Serial.print("\n");
+      Serial.print("End Voltage:       "); Serial.print(endValue, 2);   Serial.print("\n");
     } else {
-      Serial.print("Start Temperature: "); Serial.println(startValue, 2);
-      Serial.print("End Temperature:   "); Serial.println(endValue, 2);
+      Serial.print("Start Temperature: "); Serial.print(startValue, 2); Serial.print("\n");
+      Serial.print("End Temperature:   "); Serial.print(endValue, 2);   Serial.print("\n");
     }
-    Serial.print("Rise Time:         "); Serial.println(riseTime, 2);
-    Serial.print("Fall Time:         "); Serial.println(fallTime, 2);
-    Serial.print("Rise Step Size:    "); Serial.println(riseStepSize, 2);
-    Serial.print("Fall Step Size:    "); Serial.println(fallStepSize, 2);
-    Serial.print("Number Cycles:     "); Serial.println(numberCycles, 2);
-    Serial.println("----------------------------------------------------");
+    Serial.print("Rise Time:         "); Serial.print(riseTime, 2);     Serial.print("\n");
+    Serial.print("Fall Time:         "); Serial.print(fallTime, 2);     Serial.print("\n");
+    Serial.print("Rise Step Size:    "); Serial.print(riseStepSize, 2); Serial.print("\n");
+    Serial.print("Fall Step Size:    "); Serial.print(fallStepSize, 2); Serial.print("\n");
+    Serial.print("Number Cycles:     "); Serial.print(numberCycles, 2); Serial.print("\n");
+    Serial.print("----------------------------------------------------"); Serial.print("\n");
   } else {
-    Serial.println("----------------------------------------------------");
-    Serial.println("ERROR:");
-    Serial.println("----------------------------------------------------");
+    Serial.print("----------------------------------------------------"); Serial.print("\n");
+    Serial.print("ERROR:");                                               Serial.print("\n");
+    Serial.print("----------------------------------------------------"); Serial.print("\n");
   }
 
   if (voltageControlActive) {
@@ -1093,21 +1106,25 @@ void printHeader() {
     Serial.print("Current Temperature (°C), ");
     Serial.print("Resistance PT1000 (Ohm), ");
     Serial.print("Set Output Voltage (V), ");
+    Serial.print("Voltage H2 Sensor 1 (V), ");
+    Serial.print("Voltage H2 Sensor 2 (V), ");
     Serial.print("H2 Concentration Sensor 1 (%), ");
     Serial.print("H2 Concentration Sensor 2 (%), ");
     Serial.print("Analog Voltage Output (V), ");
     Serial.print("Analog Current Output (A), ");
-    Serial.println("Analog Chip Temperature (°C)");
+    Serial.print("Analog Chip Temperature (°C)"); Serial.print("\n");
   } else {
     Serial.print("Time (sec), ");
     Serial.print("Current Temperature (°C), ");
     Serial.print("Resistance PT1000 (Ohm), ");
     Serial.print("Set Temperature (°C), ");
     Serial.print("PID Output Voltage (V), ");
+    Serial.print("Voltage H2 Sensor 1 (V), ");
+    Serial.print("Voltage H2 Sensor 2 (V), ");
     Serial.print("H2 Concentration Sensor 1 (%), ");
     Serial.print("H2 Concentration Sensor 2 (%), ");
     Serial.print("Analog Voltage Output (V), ");
     Serial.print("Analog Current Output (A), ");
-    Serial.println("Analog Chip Temperature (°C)");
+    Serial.print("Analog Chip Temperature (°C)"); Serial.print("\n");
   }
 }
